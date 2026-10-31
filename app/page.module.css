@@ -2,7 +2,7 @@
   background: #1a1d23;
 }
 .main {
-  padding: 5px;
+  padding: 80px;
   display: flex;
   flex-direction: column;
   gap: 60px;
