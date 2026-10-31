@@ -31,7 +31,7 @@ export const AccountList = ({
                 <ListItemText primary={account.account} />
                 <ListItemText
                   primary={`$${account.amount.toFixed(2)}`}
-                  align="right"
+                  slotProps={{ primary: { align: "right" } }}
                 />
               </ListItemButton>
             </ListItem>
@@ -66,7 +66,7 @@ export const AccountList = ({
           <ListItemText primary="Total" />
           <ListItemText
             primary={`$${accounts.reduce((sum, account) => sum + account.amount, 0).toFixed(2)}`}
-            align="right"
+            slotProps={{ primary: { align: "right" } }}
           />
         </ListItemButton>
       </ListItem>
