@@ -35,16 +35,16 @@ async function MonthBudget({ params }: { params: Promise<{ month: string }> }) {
         <main className={styles.main}>
           <Typography variant="h1">{budget.name} Budget</Typography>
           <Grid container columnSpacing={10} rowSpacing={5}>
-            <Grid size={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <DataTable title="Income" items={budget.income} />
             </Grid>
-            <Grid size={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <DataTable title="Expenses" items={budget.expenses} />
             </Grid>
-            <Grid size={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <DataTable title="Equity Change" items={budget.equityChange} />
             </Grid>
-            <Grid size={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <DataTable title="Total Equity" items={budget.totalEquity} />
             </Grid>
           </Grid>

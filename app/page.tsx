@@ -21,7 +21,9 @@ export default function Home() {
             <Box
               sx={{
                 display: "flex",
-                justifyContent: "space-evenly",
+                justifyContent: "flex-start",
+                gap: "40px",
+                flexWrap: "wrap",
               }}
             >
               <AccountList accounts={accounts} />

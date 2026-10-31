@@ -20,20 +20,20 @@ export const DataTable = ({
       <Table aria-label="budget table">
         <TableHead>
           <TableRow>
-            <TableCell>Item</TableCell>
-            <TableCell>Amount</TableCell>
+            <TableCell align="left">Item</TableCell>
+            <TableCell align="right">Amount</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {items?.map((item, index) => (
             <TableRow key={index}>
-              <TableCell>{item.item}</TableCell>
-              <TableCell>${item.amount.toFixed(2)}</TableCell>
+              <TableCell align="left">{item.item}</TableCell>
+              <TableCell align="right">${item.amount.toFixed(2)}</TableCell>
             </TableRow>
           ))}
           <TableRow>
-            <TableCell></TableCell>
-            <TableCell>
+            <TableCell align="left"></TableCell>
+            <TableCell align="right">
               ${items?.reduce((sum, item) => sum + item.amount, 0).toFixed(2)}
             </TableCell>
           </TableRow>
