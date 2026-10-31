@@ -11,9 +11,31 @@ export type MonthBudget = {
   totalEquity: BudgetItem[];
 };
 
-const mockMonthBudgets: Record<string, MonthBudget> = {
-  november: {
-    name: "November",
+export type MonthOption = {
+  slug: string;
+  name: string;
+};
+
+export type MonthCreateMode = "copy" | "fresh";
+
+const monthSequence: MonthOption[] = [
+  { slug: "january", name: "January" },
+  { slug: "february", name: "February" },
+  { slug: "march", name: "March" },
+  { slug: "april", name: "April" },
+  { slug: "may", name: "May" },
+  { slug: "june", name: "June" },
+  { slug: "july", name: "July" },
+  { slug: "august", name: "August" },
+  { slug: "september", name: "September" },
+  { slug: "october", name: "October" },
+  { slug: "november", name: "November" },
+  { slug: "december", name: "December" },
+];
+
+const initialMonthBudgets: Record<string, MonthBudget> = {
+  "november-2025": {
+    name: "November 2025",
     income: [
       { item: "Salary", amount: 5350 },
       { item: "Rent", amount: 2400 },
@@ -37,8 +59,8 @@ const mockMonthBudgets: Record<string, MonthBudget> = {
       { item: "Mortgage", amount: -206656.16 },
     ],
   },
-  december: {
-    name: "December",
+  "december-2025": {
+    name: "December 2025",
     income: [
       { item: "Salary", amount: 5350 },
       { item: "Holiday bonus", amount: 1000 },
@@ -62,8 +84,8 @@ const mockMonthBudgets: Record<string, MonthBudget> = {
       { item: "Mortgage", amount: -206300 },
     ],
   },
-  january: {
-    name: "January",
+  "january-2026": {
+    name: "January 2026",
     income: [
       { item: "Salary", amount: 5350 },
       { item: "Side work", amount: 350 },
@@ -87,8 +109,8 @@ const mockMonthBudgets: Record<string, MonthBudget> = {
       { item: "Mortgage", amount: -205900 },
     ],
   },
-  february: {
-    name: "February",
+  "february-2026": {
+    name: "February 2026",
     income: [
       { item: "Salary", amount: 5350 },
       { item: "Side work", amount: 200 },
@@ -112,12 +134,125 @@ const mockMonthBudgets: Record<string, MonthBudget> = {
       { item: "Mortgage", amount: -205550 },
     ],
   },
+  "march-2026": {
+    name: "March 2026",
+    income: [
+      { item: "Salary", amount: 5350 },
+      { item: "Side work", amount: 250 },
+    ],
+    expenses: [
+      { item: "Rent", amount: 1850 },
+      { item: "Groceries", amount: 405 },
+      { item: "Utilities", amount: 162.8 },
+      { item: "Transportation", amount: 125 },
+    ],
+    equityChange: [
+      { item: "Credit", amount: 600 },
+      { item: "Student Loan", amount: 300 },
+      { item: "Rainy Day", amount: 550 },
+    ],
+    totalEquity: [
+      { item: "Credit", amount: -3000 },
+      { item: "Student Loan", amount: 400 },
+      { item: "Rainy Day", amount: 3650 },
+      { item: "House Value", amount: 352000 },
+      { item: "Mortgage", amount: -205200 },
+    ],
+  },
 };
 
-export function getAvailableMonths() {
-  return Object.keys(mockMonthBudgets);
+const globalForMonthData = globalThis as typeof globalThis & {
+  __budgetMonthMockBudgets?: Record<string, MonthBudget>;
+};
+
+if (!globalForMonthData.__budgetMonthMockBudgets) {
+  globalForMonthData.__budgetMonthMockBudgets = initialMonthBudgets;
+}
+
+const mockMonthBudgets =
+  globalForMonthData.__budgetMonthMockBudgets ?? initialMonthBudgets;
+
+function cloneBudget(budget: MonthBudget): MonthBudget {
+  return {
+    name: budget.name,
+    income: budget.income.map((item) => ({ ...item })),
+    expenses: budget.expenses.map((item) => ({ ...item })),
+    equityChange: budget.equityChange.map((item) => ({ ...item })),
+    totalEquity: budget.totalEquity.map((item) => ({ ...item })),
+  };
+}
+
+export function getMonthOptions(): MonthOption[] {
+  return Object.keys(mockMonthBudgets).map((slug) => ({
+    slug,
+    name: mockMonthBudgets[slug].name,
+  }));
+}
+
+export function getNextMonthOption() {
+  const months = getMonthOptions();
+  const latestMonth = months.at(-1);
+
+  if (!latestMonth) {
+    return null;
+  }
+
+  const [latestMonthSlug, latestYearValue] = latestMonth.slug.split("-");
+  const latestIndex = monthSequence.findIndex(
+    (month) => month.slug === latestMonthSlug,
+  );
+  const latestYear = Number(latestYearValue);
+
+  if (latestIndex < 0 || !Number.isInteger(latestYear)) {
+    return null;
+  }
+
+  const nextMonthIndex = (latestIndex + 1) % monthSequence.length;
+  const nextMonth = monthSequence[nextMonthIndex];
+  const nextYear = latestYear + (nextMonthIndex === 0 ? 1 : 0);
+  const nextSlug = `${nextMonth.slug}-${nextYear}`;
+
+  if (mockMonthBudgets[nextSlug]) {
+    return null;
+  }
+
+  return {
+    slug: nextSlug,
+    name: `${nextMonth.name} ${nextYear}`,
+    copyFrom: latestMonth,
+  };
+}
+
+export function createNextMonth(mode: MonthCreateMode) {
+  const nextMonth = getNextMonthOption();
+
+  if (!nextMonth) {
+    return null;
+  }
+
+  const sourceBudget = mockMonthBudgets[nextMonth.copyFrom.slug];
+  const budget =
+    mode === "copy"
+      ? { ...cloneBudget(sourceBudget), name: nextMonth.name }
+      : {
+          name: nextMonth.name,
+          income: [],
+          expenses: [],
+          equityChange: [],
+          totalEquity: [],
+        };
+
+  mockMonthBudgets[nextMonth.slug] = budget;
+  return { slug: nextMonth.slug, budget: cloneBudget(budget) };
 }
 
 export async function getMonthBudget(month: string) {
-  return mockMonthBudgets[month.toLowerCase()] ?? null;
+  const requestedMonth = month.toLowerCase();
+  const matchingSlug = getMonthOptions()
+    .reverse()
+    .find((option) => option.slug.startsWith(`${requestedMonth}-`))?.slug;
+  const budget =
+    mockMonthBudgets[requestedMonth] ??
+    (matchingSlug ? mockMonthBudgets[matchingSlug] : undefined);
+  return budget ? cloneBudget(budget) : null;
 }

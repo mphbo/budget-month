@@ -2,11 +2,11 @@ import { Container, Grid, Typography } from "@mui/material";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { DataTable } from "../../components/DataTable";
-import { getAvailableMonths, getMonthBudget } from "../../lib/monthData";
+import { getMonthBudget, getMonthOptions } from "../../lib/monthData";
 import styles from "./page.module.css";
 
 export function generateStaticParams() {
-  return getAvailableMonths().map((month) => ({ month }));
+  return getMonthOptions().map(({ slug }) => ({ month: slug }));
 }
 
 export default function MonthPage({
