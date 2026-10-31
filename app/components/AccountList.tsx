@@ -50,7 +50,7 @@ export const AccountList = ({
                 <ListItemText primary={account.account} />
                 <ListItemText
                   primary={`$${account.amount.toFixed(2)}`}
-                  align="right"
+                  slotProps={{ primary: { align: "right" } }}
                 />
               </ListItemButton>
             </ListItem>
