@@ -19,8 +19,16 @@ export const AccountList = ({
     (account) => account.type === "liability",
   );
   return (
-    <Box sx={{ width: "100%", maxWidth: 360, bgcolor: "background.paper" }}>
-      <nav aria-label="assets">
+    <Box
+      sx={{
+        width: "100%",
+        maxWidth: 360,
+        bgcolor: "background.paper",
+        height: "100%",
+        padding: 2,
+      }}
+    >
+      <Box>
         <List>
           {assets.map((account) => (
             <ListItem disablePadding key={account.account}>
@@ -37,9 +45,7 @@ export const AccountList = ({
             </ListItem>
           ))}
         </List>
-      </nav>
-      <Divider />
-      <nav aria-label="liabilities">
+        <Divider />
         <List>
           {liabilities.map((account) => (
             <ListItem disablePadding key={account.account}>
@@ -56,8 +62,8 @@ export const AccountList = ({
             </ListItem>
           ))}
         </List>
-      </nav>
-      <Divider />
+        <Divider />
+      </Box>
       <ListItem disablePadding key="total">
         <ListItemButton>
           <ListItemIcon>

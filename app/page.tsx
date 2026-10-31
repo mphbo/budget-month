@@ -1,7 +1,8 @@
 import styles from "./page.module.css";
-import { Container, Grid, Typography } from "@mui/material";
+import { Container, Typography, Box } from "@mui/material";
 import Providers from "./providers";
 import { AccountList } from "./components/AccountList";
+import { MonthList } from "./components/MonthList";
 
 export default function Home() {
   const accounts = [
@@ -17,7 +18,15 @@ export default function Home() {
         <Container sx={{ backgroundColor: "#23272f", height: "100vh" }}>
           <main className={styles.main}>
             <Typography variant="h1">Budget Month</Typography>
-            <AccountList accounts={accounts} />
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-evenly",
+              }}
+            >
+              <AccountList accounts={accounts} />
+              <MonthList />
+            </Box>
           </main>
         </Container>
       </div>

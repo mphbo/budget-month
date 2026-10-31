@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 import styles from "./AppDrawer.module.css";
+import MenuIcon from "@mui/icons-material/Menu";
 
 export function AppDrawer() {
   const [open, setOpen] = useState(false);
@@ -25,7 +26,7 @@ export function AppDrawer() {
           onClick={() => setOpen(true)}
           variant="text"
         >
-          Menu
+          <MenuIcon />
         </Button>
       </Box>
       <Drawer anchor="left" onClose={() => setOpen(false)} open={open}>
