@@ -32,11 +32,11 @@ const MonthBudget = async ({
     <div className={styles.page}>
       <Container sx={{ backgroundColor: "#23272f", minHeight: "100vh" }}>
         <main className={styles.main}>
-          <Typography variant="h2" sx={{ mb: 1.5 }}>
+          <Typography variant="h2" sx={{ mb: 2.5 }}>
             {budget.name}
           </Typography>
-          <Typography sx={{ mb: 5 }}>
-            Fill out the budget for {budget.name}.
+          <Typography sx={{ mb: 6 }}>
+            Fill out and edit your budget for {budget.name}.
           </Typography>
           <BudgetEditor key={month} monthSlug={month} budget={budget} />
         </main>

@@ -5,7 +5,6 @@
   padding: 80px;
   display: flex;
   flex-direction: column;
-  gap: 60px;
 }
 
 @media (max-width: 600px) {

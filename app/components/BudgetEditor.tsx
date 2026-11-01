@@ -4,7 +4,9 @@ import SaveIcon from "@mui/icons-material/Save";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
+import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { useState } from "react";
 import type {
   BudgetInput,
@@ -113,6 +115,28 @@ export const BudgetEditor = ({
 
   const currentInput = getBudgetSnapshot(toBudgetInput(draft));
   const isDirty = currentInput !== savedInput;
+  const incomeTotal = draft.income.reduce((sum, entry) => {
+    const amount = Number(entry.amount);
+    return sum + (Number.isFinite(amount) ? amount : 0);
+  }, 0);
+  const expensesTotal = draft.expenses.reduce((sum, entry) => {
+    const amount = Number(entry.amount);
+    return sum + (Number.isFinite(amount) ? amount : 0);
+  }, 0);
+  const monthlyDifference = incomeTotal - expensesTotal;
+  const differenceLabel =
+    monthlyDifference > 0
+      ? "Surplus"
+      : monthlyDifference < 0
+        ? "Deficit"
+        : "Balance";
+  const differenceColor =
+    monthlyDifference > 0
+      ? "success.main"
+      : monthlyDifference < 0
+        ? "error.main"
+        : "text.primary";
+  const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
 
   const updateSection = (
     section: BudgetSection,
@@ -169,6 +193,45 @@ export const BudgetEditor = ({
     <Stack spacing={2}>
       {error && <Alert severity="error">{error}</Alert>}
       {savedMessage && <Alert severity="success">{savedMessage}</Alert>}
+      <Paper
+        aria-label="Monthly income and expense summary"
+        component="section"
+        elevation={0}
+        sx={{
+          bgcolor: "background.paper",
+          border: 1,
+          borderColor: "divider",
+          p: { xs: 2, sm: 3 },
+        }}
+      >
+        <Typography sx={{ mb: 2 }} variant="h6">
+          Cash Flow
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <Typography color="text.secondary" variant="body2">
+              Income
+            </Typography>
+            <Typography variant="h6">{formatCurrency(incomeTotal)}</Typography>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <Typography color="text.secondary" variant="body2">
+              Expenses
+            </Typography>
+            <Typography variant="h6">
+              {formatCurrency(expensesTotal)}
+            </Typography>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <Typography color="text.secondary" variant="body2">
+              {differenceLabel}
+            </Typography>
+            <Typography color={differenceColor} variant="h6">
+              {formatCurrency(Math.abs(monthlyDifference))}
+            </Typography>
+          </Grid>
+        </Grid>
+      </Paper>
       <Grid
         container
         columnSpacing={{ xs: 0, md: 10 }}

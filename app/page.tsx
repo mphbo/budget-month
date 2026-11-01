@@ -26,7 +26,13 @@ const HomeContent = async () => {
     <div className={styles.page}>
       <Container sx={{ backgroundColor: "#23272f", height: "100vh" }}>
         <main className={styles.main}>
-          <Typography variant="h2">Budget Month</Typography>
+          <Typography variant="h2" sx={{ mb: 3.5 }}>
+            Budget Month
+          </Typography>
+          <Typography sx={{ mb: 8 }}>
+            Here is an overview of your finances, add/review accounts here or
+            jump into one of your monthly budgets.
+          </Typography>
           <Box
             sx={{
               display: "flex",
