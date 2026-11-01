@@ -1,36 +1,15 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Budget Month
 
-## Getting Started
+A Next.js App Router budgeting application with Supabase Auth and per-user budget data.
 
-First, run the development server:
+## Local setup
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. Create a Supabase project.
+2. Copy `.env.example` to `.env.local` and fill in `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `SITE_URL`. These are read only by server-side code, so they intentionally have no `NEXT_PUBLIC_` prefix. The Supabase publishable key is designed to be public, but this app does not need to expose it to browser JavaScript. Never use a secret/service-role key here.
+3. Apply every unapplied SQL migration in `supabase/migrations/`, in filename order, using the Supabase SQL Editor. If you have initialized and linked the Supabase CLI for this project, you can instead run `supabase db push`. If you already applied the first migration, apply the newer `save_budget_month` migration too.
+4. In Supabase Authentication settings, enable email/password sign-in and email confirmation. Add `http://localhost:3000/auth/confirm` and your production `/auth/confirm` URL to the allowed redirect URLs.
+5. Run `npm run dev`.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The app supports email/password sign-up, email confirmation, sign-in, and sign-out. Sessions use secure Supabase SSR cookies. `proxy.ts` refreshes sessions and redirects unauthenticated page/API requests; server data access also verifies signed claims. Budget tables enforce ownership with Row Level Security, so a user can only read or modify their own months and items.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The `/api/months` endpoints are the data boundary used by the UI. Reads are scoped to the signed-in user, and month creation and edits use authenticated database functions. Budget changes are saved together atomically when you choose **Save changes**. No service-role key is needed by this application.

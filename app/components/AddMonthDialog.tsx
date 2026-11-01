@@ -1,36 +1,13 @@
 "use client";
 
-import AddIcon from "@mui/icons-material/Add";
-import EditCalendarIcon from "@mui/icons-material/EditCalendar";
-import Alert from "@mui/material/Alert";
-import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
-import Divider from "@mui/material/Divider";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListItemIcon from "@mui/material/ListItemIcon";
-import ListItemText from "@mui/material/ListItemText";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-
-type MonthOption = {
-  slug: string;
-  name: string;
-};
-
-type NextMonthOption = MonthOption & {
-  copyFrom: MonthOption;
-};
-
-type MonthListResponse = {
-  months: MonthOption[];
-  nextMonth: NextMonthOption | null;
-};
+import { useState } from "react";
+import type { MonthOption, NextMonthOption } from "../lib/month-types";
 
 type CreateMonthResponse = {
   month: MonthOption;
@@ -40,7 +17,6 @@ type CreateMonthResponse = {
 export const AddMonthDialog = ({
   nextMonth,
   setNextMonth,
-  months,
   setMonths,
   setError,
   open,
@@ -48,7 +24,6 @@ export const AddMonthDialog = ({
 }: {
   nextMonth: NextMonthOption | null;
   setNextMonth: React.Dispatch<React.SetStateAction<NextMonthOption | null>>;
-  months: MonthOption[];
   setMonths: React.Dispatch<React.SetStateAction<MonthOption[]>>;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
   open: boolean;
@@ -78,6 +53,7 @@ export const AddMonthDialog = ({
       setNextMonth(result.nextMonth);
       setOpen(false);
       router.push(`/month/${result.month.slug}`);
+      router.refresh();
     } catch (createError) {
       setError(
         createError instanceof Error
@@ -94,16 +70,20 @@ export const AddMonthDialog = ({
       <DialogTitle>Add {nextMonth?.name ?? "month"}</DialogTitle>
       <DialogContent>
         {nextMonth
-          ? `Choose whether to copy the budget from ${nextMonth.copyFrom.name} or start with empty sections.`
-          : "There is no next month available to add."}
+          ? nextMonth.copyFrom
+            ? `Choose whether to copy the budget from ${nextMonth.copyFrom.name} or start with empty sections.`
+            : "This will be your first budget month. You can start with empty sections."
+          : "Could not determine which month comes next."}
       </DialogContent>
       <DialogActions sx={{ flexWrap: "wrap", p: 2 }}>
         <Button
-          disabled={isCreating || !nextMonth}
+          disabled={isCreating || !nextMonth?.copyFrom}
           onClick={() => void handleCreateMonth("copy")}
           variant="contained"
         >
-          {isCreating ? "Adding..." : `Copy ${nextMonth?.copyFrom.name}`}
+          {isCreating
+            ? "Adding..."
+            : `Copy ${nextMonth?.copyFrom?.name ?? "previous month"}`}
         </Button>
         <Button
           disabled={isCreating || !nextMonth}

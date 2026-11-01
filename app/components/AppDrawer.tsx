@@ -7,14 +7,17 @@ import {
   Divider,
   Drawer,
   List,
+  ListItem,
   ListItemButton,
   ListItemText,
 } from "@mui/material";
 import Link from "next/link";
 import { useState } from "react";
+import { signOut } from "../actions/auth";
+import type { MonthOption } from "../lib/month-types";
 import styles from "./AppDrawer.module.css";
 
-export function AppDrawer() {
+export const AppDrawer = ({ months }: { months: MonthOption[] }) => {
   const [open, setOpen] = useState(false);
 
   return (
@@ -39,44 +42,31 @@ export function AppDrawer() {
               <ListItemText primary="Home" />
             </ListItemButton>
             <Divider />
-            <ListItemButton
-              component={Link}
-              href="/month/november-2025"
-              onClick={() => setOpen(false)}
-            >
-              <ListItemText primary="November 2025" />
-            </ListItemButton>
-            <ListItemButton
-              component={Link}
-              href="/month/december-2025"
-              onClick={() => setOpen(false)}
-            >
-              <ListItemText primary="December 2025" />
-            </ListItemButton>
-            <ListItemButton
-              component={Link}
-              href="/month/january-2026"
-              onClick={() => setOpen(false)}
-            >
-              <ListItemText primary="January 2026" />
-            </ListItemButton>
-            <ListItemButton
-              component={Link}
-              href="/month/february-2026"
-              onClick={() => setOpen(false)}
-            >
-              <ListItemText primary="February 2026" />
-            </ListItemButton>
-            <ListItemButton
-              component={Link}
-              href="/month/march-2026"
-              onClick={() => setOpen(false)}
-            >
-              <ListItemText primary="March 2026" />
-            </ListItemButton>
+            {months.length === 0 ? (
+              <ListItem>
+                <ListItemText primary="No months yet" />
+              </ListItem>
+            ) : (
+              months.map((month) => (
+                <ListItemButton
+                  component={Link}
+                  href={`/month/${month.slug}`}
+                  key={month.slug}
+                  onClick={() => setOpen(false)}
+                >
+                  <ListItemText primary={month.name} />
+                </ListItemButton>
+              ))
+            )}
+            <Divider />
+            <Box component="form" action={signOut} sx={{ p: 2 }}>
+              <Button fullWidth type="submit" variant="outlined">
+                Sign out
+              </Button>
+            </Box>
           </List>
         </Box>
       </Drawer>
     </>
   );
-}
+};

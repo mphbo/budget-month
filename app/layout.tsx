@@ -1,7 +1,8 @@
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { AppDrawer } from "./components/AppDrawer";
+import { Suspense } from "react";
+import { AuthNavigation } from "./components/AuthNavigation";
 import Providers from "./providers";
 import "./globals.css";
 
@@ -21,17 +22,21 @@ export const metadata: Metadata = {
     "A simple budget app to track your income, expenses, and equity changes.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+const RootLayout = ({ children }: LayoutProps<"/">) => {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
         <AppRouterCacheProvider>
           <Providers>
-            <AppDrawer />
+            <Suspense fallback={null}>
+              <AuthNavigation />
+            </Suspense>
             {children}
           </Providers>
         </AppRouterCacheProvider>
       </body>
     </html>
   );
-}
+};
+
+export default RootLayout;

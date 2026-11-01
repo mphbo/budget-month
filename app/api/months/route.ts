@@ -3,20 +3,19 @@ import {
   createNextMonth,
   getMonthOptions,
   getNextMonthOption,
-} from "../../lib/monthData";
+} from "../../lib/budgets";
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
+};
 
-export async function GET() {
-  return NextResponse.json({
-    months: getMonthOptions(),
-    nextMonth: getNextMonthOption(),
-  });
-}
+export const GET = async () => {
+  const months = await getMonthOptions();
+  const nextMonth = await getNextMonthOption(months);
+  return NextResponse.json({ months, nextMonth });
+};
 
-export async function POST(request: Request) {
+export const POST = async (request: Request) => {
   let body: unknown;
 
   try {
@@ -39,23 +38,22 @@ export async function POST(request: Request) {
     );
   }
 
-  const createdMonth = createNextMonth(body.mode);
+  const createdMonth = await createNextMonth(body.mode);
 
   if (!createdMonth) {
     return NextResponse.json(
-      { error: "The next month could not be created." },
+      { error: "The next month already exists. Refresh and try again." },
       { status: 409 },
     );
   }
 
+  const months = await getMonthOptions();
   return NextResponse.json(
     {
-      month: {
-        slug: createdMonth.slug,
-        name: createdMonth.budget.name,
-      },
-      nextMonth: getNextMonthOption(),
+      month: createdMonth,
+      months,
+      nextMonth: await getNextMonthOption(months),
     },
     { status: 201 },
   );
-}
+};

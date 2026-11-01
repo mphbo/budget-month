@@ -1,0 +1,102 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { createSupabaseServerClient } from "../lib/supabase/server";
+
+export type AuthFormState = {
+  error?: string;
+};
+
+const getCredentials = (formData: FormData) => {
+  const email = formData.get("email");
+  const password = formData.get("password");
+
+  if (typeof email !== "string" || typeof password !== "string") {
+    return null;
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  if (
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) ||
+    password.length < 8 ||
+    password.length > 128
+  ) {
+    return null;
+  }
+
+  return { email: normalizedEmail, password };
+};
+
+export const signIn = async (
+  _previousState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> => {
+  const credentials = getCredentials(formData);
+  if (!credentials) {
+    return {
+      error: "Enter a valid email and a password of at least 8 characters.",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.signInWithPassword(credentials);
+  if (error) {
+    return { error: "Could not sign in with those credentials." };
+  }
+
+  const requestedPath = formData.get("next");
+  const parsedNextPath =
+    typeof requestedPath === "string" && requestedPath.startsWith("/")
+      ? new URL(requestedPath, "http://localhost")
+      : null;
+  const nextPath =
+    parsedNextPath?.origin === "http://localhost"
+      ? `${parsedNextPath.pathname}${parsedNextPath.search}${parsedNextPath.hash}`
+      : "/";
+
+  redirect(nextPath);
+};
+
+export const signUp = async (
+  _previousState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> => {
+  const credentials = getCredentials(formData);
+  if (!credentials) {
+    return {
+      error: "Enter a valid email and a password of at least 8 characters.",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.auth.signUp({
+    ...credentials,
+    options: {
+      emailRedirectTo: `${
+        new URL(process.env.SITE_URL ?? "http://localhost:3000").origin
+      }/auth/confirm`,
+    },
+  });
+
+  if (error) {
+    return {
+      error: "Could not create an account. Check the email and try again.",
+    };
+  }
+
+  if (data.session) {
+    redirect("/");
+  }
+
+  redirect("/login?message=check-email");
+};
+
+export const signOut = async () => {
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    throw new Error("Could not sign out. Please try again.");
+  }
+
+  redirect("/login");
+};
