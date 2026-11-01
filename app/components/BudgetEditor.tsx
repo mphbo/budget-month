@@ -62,6 +62,21 @@ const toBudgetInput = (budget: EditableBudget): BudgetInput => {
   };
 };
 
+const getBudgetSnapshot = (budget: BudgetInput) =>
+  JSON.stringify(
+    Object.fromEntries(
+      (Object.keys(sectionTitles) as BudgetSection[]).map((section) => [
+        section,
+        budget[section].map(({ item, amount }) => ({
+          item: item.trim(),
+          amount: /^-?\d{1,12}(?:\.\d{1,2})?$/.test(amount)
+            ? Number(amount).toFixed(2)
+            : amount,
+        })),
+      ]),
+    ),
+  );
+
 const getValidationError = (budget: EditableBudget) => {
   for (const section of Object.keys(sectionTitles) as BudgetSection[]) {
     for (const entry of budget[section]) {
@@ -89,13 +104,14 @@ export const BudgetEditor = ({
 }) => {
   const [draft, setDraft] = useState(() => createEditableBudget(budget));
   const [savedInput, setSavedInput] = useState(() =>
-    JSON.stringify(toBudgetInput(createEditableBudget(budget))),
+    getBudgetSnapshot(toBudgetInput(createEditableBudget(budget))),
   );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const [savedVersion, setSavedVersion] = useState(0);
 
-  const currentInput = JSON.stringify(toBudgetInput(draft));
+  const currentInput = getBudgetSnapshot(toBudgetInput(draft));
   const isDirty = currentInput !== savedInput;
 
   const updateSection = (
@@ -135,7 +151,8 @@ export const BudgetEditor = ({
         throw new Error(result.error ?? "Could not save this month's budget.");
       }
 
-      setSavedInput(JSON.stringify(input));
+      setSavedInput(getBudgetSnapshot(input));
+      setSavedVersion((version) => version + 1);
       setSavedMessage("Changes saved.");
     } catch (saveError) {
       setError(
@@ -154,7 +171,7 @@ export const BudgetEditor = ({
       {savedMessage && <Alert severity="success">{savedMessage}</Alert>}
       <Grid container columnSpacing={10} rowSpacing={5}>
         {(Object.keys(sectionTitles) as BudgetSection[]).map((section) => (
-          <Grid key={section} size={{ xs: 12, md: 6 }}>
+          <Grid key={`${section}-${savedVersion}`} size={{ xs: 12, md: 6 }}>
             <DataTable
               disabled={isSaving}
               items={draft[section]}

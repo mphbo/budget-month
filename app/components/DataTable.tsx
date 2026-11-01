@@ -1,6 +1,8 @@
 "use client";
 
 import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/Edit";
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import Table from "@mui/material/Table";
@@ -10,6 +12,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { useEffect, useState } from "react";
 
 export type EditableBudgetItem = {
   id: string;
@@ -28,10 +31,36 @@ export const DataTable = ({
   onChange: (items: EditableBudgetItem[]) => void;
   disabled: boolean;
 }) => {
+  const [editingIds, setEditingIds] = useState<Set<string>>(() => new Set());
   const total = items.reduce((sum, entry) => {
     const amount = Number(entry.amount);
     return sum + (Number.isFinite(amount) ? amount : 0);
   }, 0);
+
+  useEffect(() => {
+    if (editingIds.size === 0) {
+      return;
+    }
+
+    const handleDocumentPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      const editingRow =
+        target instanceof Element
+          ? target.closest("input")?.closest("[data-budget-row]")
+          : null;
+      const rowId = editingRow?.getAttribute("data-budget-row");
+
+      if (rowId && editingIds.has(rowId)) {
+        setEditingIds(new Set([rowId]));
+      } else {
+        setEditingIds(new Set());
+      }
+    };
+
+    document.addEventListener("pointerdown", handleDocumentPointerDown);
+    return () =>
+      document.removeEventListener("pointerdown", handleDocumentPointerDown);
+  }, [editingIds]);
 
   const updateItem = (index: number, patch: Partial<EditableBudgetItem>) => {
     onChange(
@@ -39,6 +68,30 @@ export const DataTable = ({
         entryIndex === index ? { ...entry, ...patch } : entry,
       ),
     );
+  };
+
+  const startEditing = (entry: EditableBudgetItem) => {
+    setEditingIds((current) => new Set(current).add(entry.id));
+  };
+
+  const handleRowBlur = (
+    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
+    entry: EditableBudgetItem,
+  ) => {
+    const row = event.currentTarget.closest("tr");
+    if (
+      row &&
+      event.relatedTarget instanceof Node &&
+      row.contains(event.relatedTarget)
+    ) {
+      return;
+    }
+
+    setEditingIds((current) => {
+      const next = new Set(current);
+      next.delete(entry.id);
+      return next;
+    });
   };
 
   return (
@@ -54,46 +107,68 @@ export const DataTable = ({
         </TableHead>
         <TableBody>
           {items.map((entry, index) => (
-            <TableRow key={entry.id}>
+            <TableRow data-budget-row={entry.id} key={entry.id}>
               <TableCell>
-                <TextField
-                  aria-label={`${title} item ${index + 1}`}
-                  disabled={disabled}
-                  fullWidth
-                  slotProps={{ htmlInput: { maxLength: 200 } }}
-                  onChange={(event) =>
-                    updateItem(index, { item: event.target.value })
-                  }
-                  size="small"
-                  value={entry.item}
-                />
+                {editingIds.has(entry.id) ? (
+                  <TextField
+                    aria-label={`${title} item ${index + 1}`}
+                    disabled={disabled}
+                    fullWidth
+                    slotProps={{ htmlInput: { maxLength: 200 } }}
+                    onBlur={(event) => handleRowBlur(event, entry)}
+                    onChange={(event) =>
+                      updateItem(index, { item: event.target.value })
+                    }
+                    size="small"
+                    value={entry.item}
+                  />
+                ) : (
+                  entry.item
+                )}
               </TableCell>
               <TableCell align="right">
-                <TextField
-                  aria-label={`${title} amount ${index + 1}`}
-                  disabled={disabled}
-                  fullWidth
-                  slotProps={{
-                    htmlInput: { inputMode: "decimal", maxLength: 16 },
-                  }}
-                  onChange={(event) =>
-                    updateItem(index, { amount: event.target.value })
-                  }
-                  size="small"
-                  value={entry.amount}
-                />
+                {editingIds.has(entry.id) ? (
+                  <TextField
+                    aria-label={`${title} amount ${index + 1}`}
+                    disabled={disabled}
+                    fullWidth
+                    slotProps={{
+                      htmlInput: { inputMode: "decimal", maxLength: 16 },
+                    }}
+                    onBlur={(event) => handleRowBlur(event, entry)}
+                    onChange={(event) =>
+                      updateItem(index, { amount: event.target.value })
+                    }
+                    size="small"
+                    value={entry.amount}
+                  />
+                ) : (
+                  `$${(Number(entry.amount) || 0).toFixed(2)}`
+                )}
               </TableCell>
               <TableCell padding="checkbox">
-                <IconButton
-                  aria-label={`Remove ${entry.item || `row ${index + 1}`}`}
-                  disabled={disabled}
-                  onClick={() =>
-                    onChange(items.filter((item) => item.id !== entry.id))
-                  }
-                  size="small"
-                >
-                  x
-                </IconButton>
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  {!editingIds.has(entry.id) && (
+                    <IconButton
+                      aria-label={`Edit ${entry.item || `row ${index + 1}`}`}
+                      disabled={disabled}
+                      onClick={() => startEditing(entry)}
+                      size="small"
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  )}
+                  <IconButton
+                    aria-label={`Remove ${entry.item || `row ${index + 1}`}`}
+                    disabled={disabled}
+                    onClick={() =>
+                      onChange(items.filter((item) => item.id !== entry.id))
+                    }
+                    size="small"
+                  >
+                    x
+                  </IconButton>
+                </Box>
               </TableCell>
             </TableRow>
           ))}
@@ -112,12 +187,12 @@ export const DataTable = ({
       </Table>
       <Button
         disabled={disabled || items.length >= 100}
-        onClick={() =>
-          onChange([
-            ...items,
-            { id: crypto.randomUUID(), item: "", amount: "" },
-          ])
-        }
+        onClick={() => {
+          const id = crypto.randomUUID();
+          const newItem = { id, item: "", amount: "" };
+          onChange([...items, newItem]);
+          startEditing(newItem);
+        }}
         startIcon={<AddIcon />}
         sx={{ mt: 1 }}
       >
