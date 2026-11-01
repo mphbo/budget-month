@@ -1,6 +1,7 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { cache } from "react";
+import type { Account, AccountInput, AccountType } from "./account-types";
 import type {
   BudgetInput,
   MonthBudget,
@@ -112,6 +113,87 @@ export const getMonthNavigationData = cache(async () => {
     nextMonth: await getNextMonthOption(months),
   };
 });
+
+export const getAccounts = async (): Promise<Account[]> => {
+  const { supabase, userId } = await getAuthorizedSupabaseClient();
+  const { data, error } = await supabase
+    .from("account_items")
+    .select("id, name, account_type, category, amount")
+    .eq("user_id", userId)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return data.map((account) => {
+    const type: AccountType = account.account_type;
+    if (type !== "asset" && type !== "liability") {
+      throw new Error("An account has an invalid type in the database.");
+    }
+
+    return {
+      id: account.id,
+      name: account.name,
+      type,
+      category: account.category,
+      amount: Number(account.amount),
+    };
+  });
+};
+
+export const createAccount = async (
+  account: AccountInput,
+): Promise<Account> => {
+  const { supabase } = await getAuthorizedSupabaseClient();
+  const { data, error } = await supabase
+    .rpc("create_account_item", {
+      p_name: account.name.trim(),
+      p_type: account.type,
+      p_category: account.category.trim(),
+      p_amount: account.amount,
+    })
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  if (
+    typeof data !== "object" ||
+    data === null ||
+    !("id" in data) ||
+    typeof data.id !== "string" ||
+    !("name" in data) ||
+    typeof data.name !== "string" ||
+    !("account_type" in data) ||
+    (data.account_type !== "asset" && data.account_type !== "liability") ||
+    !("category" in data) ||
+    typeof data.category !== "string" ||
+    !("amount" in data)
+  ) {
+    throw new Error("Account creation returned an invalid database result.");
+  }
+
+  return {
+    id: data.id,
+    name: data.name,
+    type: data.account_type,
+    category: data.category,
+    amount: Number(data.amount),
+  };
+};
+
+export const saveAccounts = async (accounts: AccountInput[]) => {
+  const { supabase } = await getAuthorizedSupabaseClient();
+  const { error } = await supabase.rpc("save_account_items", {
+    p_accounts: accounts,
+  });
+
+  if (error) {
+    throw error;
+  }
+};
 
 export const createNextMonth = async (mode: MonthCreateMode) => {
   const { supabase } = await getAuthorizedSupabaseClient();

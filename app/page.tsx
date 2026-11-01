@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { AccountList } from "./components/AccountList";
 import { MonthList } from "./components/MonthList";
-import { getMonthNavigationData } from "./lib/budgets";
+import { getAccounts, getMonthNavigationData } from "./lib/budgets";
 import styles from "./page.module.css";
 
 const Home = () => {
@@ -17,19 +17,16 @@ const Home = () => {
 const HomeContent = async () => {
   await connection();
 
-  const { months, nextMonth } = await getMonthNavigationData();
-  const accounts = [
-    { account: "Checking", amount: 300, type: "asset" },
-    { account: "Rainy Day", amount: 400, type: "asset" },
-    { account: "Credit", amount: -1200, type: "liability" },
-    { account: "Student Loan", amount: -1500, type: "liability" },
-  ];
+  const [{ months, nextMonth }, accounts] = await Promise.all([
+    getMonthNavigationData(),
+    getAccounts(),
+  ]);
 
   return (
     <div className={styles.page}>
       <Container sx={{ backgroundColor: "#23272f", height: "100vh" }}>
         <main className={styles.main}>
-          <Typography variant="h1">Budget Month</Typography>
+          <Typography variant="h2">Budget Month</Typography>
           <Box
             sx={{
               display: "flex",

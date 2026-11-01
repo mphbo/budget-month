@@ -10,6 +10,7 @@ import {
   ListItem,
   ListItemButton,
   ListItemText,
+  useMediaQuery,
 } from "@mui/material";
 import Link from "next/link";
 import { useState } from "react";
@@ -19,6 +20,7 @@ import styles from "./AppDrawer.module.css";
 
 export const AppDrawer = ({ months }: { months: MonthOption[] }) => {
   const [open, setOpen] = useState(false);
+  const isMobile = useMediaQuery("(max-width:600px)");
 
   return (
     <>
@@ -31,7 +33,11 @@ export const AppDrawer = ({ months }: { months: MonthOption[] }) => {
           <MenuIcon />
         </Button>
       </Box>
-      <Drawer anchor="left" onClose={() => setOpen(false)} open={open}>
+      <Drawer
+        anchor={isMobile ? "right" : "left"}
+        onClose={() => setOpen(false)}
+        open={open}
+      >
         <Box sx={{ width: 280 }} role="presentation">
           <List>
             <ListItemButton

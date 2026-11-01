@@ -10,6 +10,6 @@ A Next.js App Router budgeting application with Supabase Auth and per-user budge
 4. In Supabase Authentication settings, enable email/password sign-in and email confirmation. Add `http://localhost:3000/auth/confirm` and your production `/auth/confirm` URL to the allowed redirect URLs.
 5. Run `npm run dev`.
 
-The app supports email/password sign-up, email confirmation, sign-in, and sign-out. Sessions use secure Supabase SSR cookies. `proxy.ts` refreshes sessions and redirects unauthenticated page/API requests; server data access also verifies signed claims. Budget tables enforce ownership with Row Level Security, so a user can only read or modify their own months and items.
+The app supports email/password sign-up, email confirmation, sign-in, and sign-out. Sessions use secure Supabase SSR cookies. `proxy.ts` refreshes sessions and redirects unauthenticated page/API requests; server data access also verifies signed claims. Budget and account tables enforce ownership with Row Level Security, so a user can only read or modify their own data. Accounts can be added from the dashboard and edited or removed there, then saved together.
 
 The `/api/months` endpoints are the data boundary used by the UI. Reads are scoped to the signed-in user, and month creation and edits use authenticated database functions. Budget changes are saved together atomically when you choose **Save changes**. No service-role key is needed by this application.
