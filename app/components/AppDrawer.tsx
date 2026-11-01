@@ -1,6 +1,7 @@
 "use client";
 
 import MenuIcon from "@mui/icons-material/Menu";
+import EditCalendarIcon from "@mui/icons-material/EditCalendar";
 import {
   Box,
   Button,
@@ -60,6 +61,7 @@ export const AppDrawer = ({ months }: { months: MonthOption[] }) => {
                   key={month.slug}
                   onClick={() => setOpen(false)}
                 >
+                  <EditCalendarIcon />
                   <ListItemText primary={month.name} />
                 </ListItemButton>
               ))

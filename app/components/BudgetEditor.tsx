@@ -7,12 +7,16 @@ import Grid from "@mui/material/Grid";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import type { Account } from "../lib/account-types";
+import { getApiErrorMessage, readApiJson } from "../lib/api-response";
 import type {
   BudgetInput,
   BudgetSection,
   MonthBudget,
 } from "../lib/month-types";
+import { AddAccountDialog } from "./AddAccountDialog";
 import { DataTable, type EditableBudgetItem } from "./DataTable";
 
 type EditableBudget = Record<BudgetSection, EditableBudgetItem[]>;
@@ -51,15 +55,24 @@ const createEditableBudget = (budget: MonthBudget): EditableBudget => {
 
 const toBudgetInput = (budget: EditableBudget): BudgetInput => {
   return {
-    income: budget.income.map(({ item, amount }) => ({ item, amount })),
-    expenses: budget.expenses.map(({ item, amount }) => ({ item, amount })),
+    income: budget.income.map(({ item, amount, date }) => ({
+      item,
+      amount,
+      ...(date ? { date } : {}),
+    })),
+    expenses: budget.expenses.map(({ item, amount, date }) => ({
+      item,
+      amount,
+      ...(date ? { date } : {}),
+    })),
     equityChange: budget.equityChange.map(({ item, amount }) => ({
       item,
       amount,
     })),
-    totalEquity: budget.totalEquity.map(({ item, amount }) => ({
+    totalEquity: budget.totalEquity.map(({ item, amount, accountId }) => ({
       item,
       amount,
+      ...(accountId ? { accountId } : {}),
     })),
   };
 };
@@ -69,11 +82,13 @@ const getBudgetSnapshot = (budget: BudgetInput) =>
     Object.fromEntries(
       (Object.keys(sectionTitles) as BudgetSection[]).map((section) => [
         section,
-        budget[section].map(({ item, amount }) => ({
+        budget[section].map(({ item, amount, accountId, date }) => ({
           item: item.trim(),
           amount: /^-?\d{1,12}(?:\.\d{1,2})?$/.test(amount)
             ? Number(amount).toFixed(2)
             : amount,
+          ...(accountId ? { accountId } : {}),
+          ...(date ? { date } : {}),
         })),
       ]),
     ),
@@ -100,10 +115,15 @@ const getValidationError = (budget: EditableBudget) => {
 export const BudgetEditor = ({
   monthSlug,
   budget,
+  isCurrentMonth,
+  isFutureMonth,
 }: {
   monthSlug: string;
   budget: MonthBudget;
+  isCurrentMonth: boolean;
+  isFutureMonth: boolean;
 }) => {
+  const router = useRouter();
   const [draft, setDraft] = useState(() => createEditableBudget(budget));
   const [savedInput, setSavedInput] = useState(() =>
     getBudgetSnapshot(toBudgetInput(createEditableBudget(budget))),
@@ -112,6 +132,7 @@ export const BudgetEditor = ({
   const [error, setError] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
   const [savedVersion, setSavedVersion] = useState(0);
+  const [isAddingEquityItem, setIsAddingEquityItem] = useState(false);
 
   const currentInput = getBudgetSnapshot(toBudgetInput(draft));
   const isDirty = currentInput !== savedInput;
@@ -142,9 +163,90 @@ export const BudgetEditor = ({
     section: BudgetSection,
     items: EditableBudgetItem[],
   ) => {
-    setDraft((current) => ({ ...current, [section]: items }));
+    setDraft((current) => {
+      if (section !== "totalEquity" || !isCurrentMonth) {
+        return { ...current, [section]: items };
+      }
+
+      const equityChanges = new Map(
+        current.equityChange
+          .filter((entry) => entry.accountId)
+          .map((entry) => [entry.accountId as string, entry]),
+      );
+      const nextItemsByAccountId = new Map(
+        items
+          .filter((entry) => entry.accountId)
+          .map((entry) => [entry.accountId as string, entry]),
+      );
+
+      for (const previous of current.totalEquity) {
+        if (!previous.accountId) {
+          continue;
+        }
+
+        const change = equityChanges.get(previous.accountId);
+        const next = nextItemsByAccountId.get(previous.accountId);
+        const nextChange =
+          Number(change?.amount ?? 0) +
+          (next
+            ? Number(next.amount) - Number(previous.amount)
+            : -Number(previous.amount));
+
+        if (nextChange === 0) {
+          equityChanges.delete(previous.accountId);
+        } else {
+          equityChanges.set(previous.accountId, {
+            accountId: previous.accountId,
+            item: next?.item ?? change?.item ?? previous.item,
+            amount: nextChange.toFixed(2),
+            id: change?.id ?? `equity-change-${previous.accountId}`,
+          });
+        }
+      }
+
+      return {
+        ...current,
+        totalEquity: items,
+        equityChange: [
+          ...Array.from(equityChanges.values()),
+          ...current.equityChange.filter((entry) => !entry.accountId),
+        ],
+      };
+    });
     setError(null);
     setSavedMessage(null);
+  };
+
+  const handleEquityAccountCreated = async (_account: Account) => {
+    try {
+      const response = await fetch(
+        `/api/months/${encodeURIComponent(monthSlug)}`,
+      );
+      if (!response.ok) {
+        throw new Error(
+          "The account was added, but Total Equity could not refresh. Reload this page.",
+        );
+      }
+
+      const refreshedBudget = await readApiJson<MonthBudget>(
+        response,
+        "Could not read the refreshed budget",
+      );
+      const refreshedDraft = createEditableBudget(refreshedBudget);
+      setDraft(refreshedDraft);
+      setSavedInput(getBudgetSnapshot(toBudgetInput(refreshedDraft)));
+      setError(null);
+      setSavedMessage("Account added and synced with Total Equity.");
+      setIsAddingEquityItem(false);
+      router.refresh();
+    } catch (refreshError) {
+      setError(
+        refreshError instanceof Error
+          ? refreshError.message
+          : "The account was added, but Total Equity could not refresh. Reload this page.",
+      );
+      setSavedMessage(null);
+    }
   };
 
   const saveBudget = async () => {
@@ -171,13 +273,21 @@ export const BudgetEditor = ({
       );
 
       if (!response.ok) {
-        const result: { error?: string } = await response.json();
-        throw new Error(result.error ?? "Could not save this month's budget.");
+        throw new Error(
+          await getApiErrorMessage(
+            response,
+            "Could not save this month's budget",
+          ),
+        );
       }
 
       setSavedInput(getBudgetSnapshot(input));
       setSavedVersion((version) => version + 1);
-      setSavedMessage("Changes saved.");
+      setSavedMessage(
+        isCurrentMonth
+          ? "Changes saved and account balances synced."
+          : "Changes saved.",
+      );
     } catch (saveError) {
       setError(
         saveError instanceof Error
@@ -192,7 +302,6 @@ export const BudgetEditor = ({
   return (
     <Stack spacing={5}>
       {error && <Alert severity="error">{error}</Alert>}
-      {savedMessage && <Alert severity="success">{savedMessage}</Alert>}
       <Paper
         aria-label="Monthly income and expense summary"
         component="section"
@@ -240,14 +349,53 @@ export const BudgetEditor = ({
         {(Object.keys(sectionTitles) as BudgetSection[]).map((section) => (
           <Grid key={`${section}-${savedVersion}`} size={{ xs: 12, md: 6 }}>
             <DataTable
+              accountSynced={isCurrentMonth && section === "totalEquity"}
               disabled={isSaving}
               items={draft[section]}
               onChange={(items) => updateSection(section, items)}
+              showDate={section === "income" || section === "expenses"}
+              onAddItem={
+                isCurrentMonth && section === "totalEquity"
+                  ? () => setIsAddingEquityItem(true)
+                  : undefined
+              }
+              addDisabled={
+                isCurrentMonth &&
+                section === "totalEquity" &&
+                (isDirty || isAddingEquityItem)
+              }
+              readOnly={section === "equityChange"}
               title={sectionTitles[section]}
+              titleTooltip={
+                section === "totalEquity"
+                  ? isCurrentMonth
+                    ? "This month’s equity balances are synced with Accounts. Edit balances or delete accounts here; liabilities are negative. Changes apply when you save."
+                    : isFutureMonth
+                      ? "This is a planned equity estimate for a future month. It does not sync with Accounts."
+                      : "This is a historical snapshot. Changes here do not affect Accounts."
+                  : section === "equityChange"
+                    ? "Calculated per item as this month’s Total Equity minus the previous month’s Total Equity. Positive amounts are increases; negative amounts are decreases."
+                    : undefined
+              }
             />
           </Grid>
         ))}
       </Grid>
+      {isCurrentMonth && (
+        <AddAccountDialog
+          onClose={() => setIsAddingEquityItem(false)}
+          onCreated={(account) => void handleEquityAccountCreated(account)}
+          open={isAddingEquityItem}
+        />
+      )}
+      <Alert severity="info">
+        {isCurrentMonth
+          ? "Total Equity balances sync with Accounts for this month. Add, edit, or delete accounts here, or manage accounts on the home page. Liabilities are negative. Equity Change compares this month with the previous month."
+          : isFutureMonth
+            ? "Total Equity is a planned estimate for this future month and does not sync with Accounts. Equity Change compares it with the previous month's Total Equity."
+            : "This month is a historical snapshot. Equity Change compares its Total Equity with the previous month's snapshot; edits won't affect Accounts."}
+      </Alert>
+      {savedMessage && <Alert severity="success">{savedMessage}</Alert>}
       <div>
         <Button
           disabled={!isDirty || isSaving}
@@ -255,7 +403,11 @@ export const BudgetEditor = ({
           startIcon={<SaveIcon />}
           variant="contained"
         >
-          {isSaving ? "Saving..." : "Save changes"}
+          {isSaving
+            ? "Saving..."
+            : isCurrentMonth && isDirty
+              ? "Save changes and sync Accounts"
+              : "Save changes"}
         </Button>
       </div>
     </Stack>

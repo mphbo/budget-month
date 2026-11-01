@@ -3,7 +3,11 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { BudgetEditor } from "../../components/BudgetEditor";
-import { getMonthBudget } from "../../lib/budgets";
+import {
+  getMonthBudget,
+  isCurrentMonth,
+  isFutureMonth,
+} from "../../lib/budgets";
 import styles from "./page.module.css";
 
 const MonthPage = ({ params }: { params: Promise<{ month: string }> }) => {
@@ -30,7 +34,7 @@ const MonthBudget = async ({
 
   return (
     <div className={styles.page}>
-      <Container sx={{ backgroundColor: "#23272f", minHeight: "100vh" }}>
+      <Container sx={{ backgroundColor: "#23272f" }}>
         <main className={styles.main}>
           <Typography variant="h2" sx={{ mb: 2 }}>
             {budget.name}
@@ -38,7 +42,13 @@ const MonthBudget = async ({
           <Typography sx={{ mb: 5 }}>
             Fill out and edit your budget for {budget.name}.
           </Typography>
-          <BudgetEditor key={month} monthSlug={month} budget={budget} />
+          <BudgetEditor
+            key={month}
+            monthSlug={month}
+            budget={budget}
+            isCurrentMonth={isCurrentMonth(month)}
+            isFutureMonth={isFutureMonth(month)}
+          />
         </main>
       </Container>
     </div>

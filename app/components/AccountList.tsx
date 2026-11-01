@@ -19,7 +19,13 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
-import type { Account, AccountInput, AccountType } from "../lib/account-types";
+import { getApiErrorMessage } from "../lib/api-response";
+import type {
+  Account,
+  AccountInput,
+  AccountType,
+  AccountUpdateInput,
+} from "../lib/account-types";
 import { AddAccountDialog } from "./AddAccountDialog";
 
 type EditableAccount = Omit<Account, "amount"> & { amount: string };
@@ -34,6 +40,13 @@ const toAccountInput = (account: EditableAccount): AccountInput => ({
   type: account.type,
   category: account.category,
   amount: account.amount,
+});
+
+const toAccountUpdateInput = (
+  account: EditableAccount,
+): AccountUpdateInput => ({
+  ...toAccountInput(account),
+  id: account.id,
 });
 
 const accountSnapshot = (accounts: AccountInput[]) =>
@@ -150,12 +163,13 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
       const response = await fetch("/api/accounts", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accounts: input }),
+        body: JSON.stringify({ accounts: draft.map(toAccountUpdateInput) }),
       });
 
       if (!response.ok) {
-        const result: { error?: string } = await response.json();
-        throw new Error(result.error ?? "Could not save your accounts.");
+        throw new Error(
+          await getApiErrorMessage(response, "Could not save your accounts"),
+        );
       }
 
       setSavedAccounts(input);
@@ -318,7 +332,6 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
     >
       <Stack spacing={3}>
         {error && <Alert severity="error">{error}</Alert>}
-        {savedMessage && <Alert severity="success">{savedMessage}</Alert>}
         <Typography variant="h4">Assets</Typography>
         <List>
           {assets.map((account, index) => renderAccount(account, index))}
@@ -346,6 +359,11 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
           <ListItemText primary="Net total" />
           <Typography>${total.toFixed(2)}</Typography>
         </ListItem>
+        <Alert severity="info">
+          Saved account balances sync with this month&apos;s Total Equity. Past
+          months remain historical snapshots.
+        </Alert>
+        {savedMessage && <Alert severity="success">{savedMessage}</Alert>}
         <Stack direction="row" spacing={1}>
           <Button
             disabled={isSaving}

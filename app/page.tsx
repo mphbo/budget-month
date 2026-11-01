@@ -17,14 +17,12 @@ const Home = () => {
 const HomeContent = async () => {
   await connection();
 
-  const [{ months, nextMonth }, accounts] = await Promise.all([
-    getMonthNavigationData(),
-    getAccounts(),
-  ]);
+  const [{ months, nextMonth, previousMonth, deletableMonths }, accounts] =
+    await Promise.all([getMonthNavigationData(), getAccounts()]);
 
   return (
     <div className={styles.page}>
-      <Container sx={{ backgroundColor: "#23272f", height: "100vh" }}>
+      <Container sx={{ backgroundColor: "#23272f" }}>
         <main className={styles.main}>
           <Typography variant="h2" sx={{ mb: 3.5 }}>
             Budget Month
@@ -42,7 +40,12 @@ const HomeContent = async () => {
             }}
           >
             <AccountList accounts={accounts} />
-            <MonthList initialMonths={months} initialNextMonth={nextMonth} />
+            <MonthList
+              initialMonths={months}
+              initialNextMonth={nextMonth}
+              initialPreviousMonth={previousMonth}
+              initialDeletableMonths={deletableMonths}
+            />
           </Box>
         </main>
       </Container>

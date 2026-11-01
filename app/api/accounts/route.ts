@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import type { AccountInput } from "../../lib/account-types";
+import type { AccountInput, AccountUpdateInput } from "../../lib/account-types";
 import { createAccount, getAccounts, saveAccounts } from "../../lib/budgets";
+import { mutationErrorResponse } from "../errors";
 
 const isAccountInput = (value: unknown): value is AccountInput => {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -18,6 +19,20 @@ const isAccountInput = (value: unknown): value is AccountInput => {
     account.category.trim().length <= 100 &&
     typeof account.amount === "string" &&
     /^\d{1,12}(?:\.\d{1,2})?$/.test(account.amount)
+  );
+};
+
+const isAccountUpdateInput = (value: unknown): value is AccountUpdateInput => {
+  if (!isAccountInput(value)) {
+    return false;
+  }
+
+  const account = value as AccountInput & { id?: unknown };
+  return (
+    typeof account.id === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      account.id,
+    )
   );
 };
 
@@ -55,8 +70,12 @@ export const POST = async (request: Request) => {
     );
   }
 
-  const account = await createAccount(body.account);
-  return NextResponse.json({ account }, { status: 201 });
+  try {
+    const account = await createAccount(body.account);
+    return NextResponse.json({ account }, { status: 201 });
+  } catch (error) {
+    return mutationErrorResponse("Could not add this account", error);
+  }
 };
 
 export const PATCH = async (request: Request) => {
@@ -68,7 +87,7 @@ export const PATCH = async (request: Request) => {
     !("accounts" in body) ||
     !Array.isArray(body.accounts) ||
     body.accounts.length > 100 ||
-    !body.accounts.every(isAccountInput)
+    !body.accounts.every(isAccountUpdateInput)
   ) {
     return NextResponse.json(
       { error: "Account changes are invalid. Check each account's details." },
@@ -76,6 +95,10 @@ export const PATCH = async (request: Request) => {
     );
   }
 
-  await saveAccounts(body.accounts);
-  return NextResponse.json({ saved: true });
+  try {
+    await saveAccounts(body.accounts);
+    return NextResponse.json({ saved: true });
+  } catch (error) {
+    return mutationErrorResponse("Could not save your accounts", error);
+  }
 };

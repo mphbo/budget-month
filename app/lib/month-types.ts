@@ -3,6 +3,8 @@ export type MonthCreateMode = "copy" | "fresh";
 export type BudgetItem = {
   item: string;
   amount: number;
+  accountId?: string;
+  date?: string;
 };
 
 export const budgetSections = [
@@ -17,6 +19,8 @@ export type BudgetSection = (typeof budgetSections)[number];
 export type BudgetItemInput = {
   item: string;
   amount: string;
+  accountId?: string;
+  date?: string;
 };
 
 export type BudgetInput = Record<BudgetSection, BudgetItemInput[]>;
@@ -37,3 +41,9 @@ export type MonthOption = {
 export type NextMonthOption = MonthOption & {
   copyFrom: MonthOption | null;
 };
+
+export type PreviousMonthOption = MonthOption & {
+  copyFrom: MonthOption;
+};
+
+export type MonthDirection = "previous" | "next";

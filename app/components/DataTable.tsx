@@ -2,6 +2,7 @@
 
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
@@ -10,7 +11,9 @@ import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
+import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
 
@@ -18,24 +21,74 @@ export type EditableBudgetItem = {
   id: string;
   item: string;
   amount: string;
+  accountId?: string;
+  date?: string;
 };
+
+type SortColumn = "item" | "amount";
+type SortDirection = "asc" | "desc";
 
 export const DataTable = ({
   title,
   items,
   onChange,
   disabled,
+  accountSynced = false,
+  readOnly = false,
+  titleTooltip,
+  onAddItem,
+  addDisabled = false,
+  showDate = false,
 }: {
   title: string;
   items: EditableBudgetItem[];
   onChange: (items: EditableBudgetItem[]) => void;
   disabled: boolean;
+  accountSynced?: boolean;
+  readOnly?: boolean;
+  titleTooltip?: string;
+  onAddItem?: () => void;
+  addDisabled?: boolean;
+  showDate?: boolean;
 }) => {
   const [editingIds, setEditingIds] = useState<Set<string>>(() => new Set());
+  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const total = items.reduce((sum, entry) => {
     const amount = Number(entry.amount);
     return sum + (Number.isFinite(amount) ? amount : 0);
   }, 0);
+  const displayItems = items
+    .map((entry, index) => ({ entry, index }))
+    .sort((left, right) => {
+      if (!sortColumn) {
+        return left.index - right.index;
+      }
+
+      const comparison =
+        sortColumn === "item"
+          ? left.entry.item.localeCompare(right.entry.item, undefined, {
+              numeric: true,
+              sensitivity: "base",
+            })
+          : (Number(left.entry.amount) || 0) -
+            (Number(right.entry.amount) || 0);
+
+      return (
+        (sortDirection === "asc" ? comparison : -comparison) ||
+        left.index - right.index
+      );
+    });
+
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection((direction) => (direction === "asc" ? "desc" : "asc"));
+      return;
+    }
+
+    setSortColumn(column);
+    setSortDirection("asc");
+  };
 
   useEffect(() => {
     if (editingIds.size === 0) {
@@ -96,32 +149,76 @@ export const DataTable = ({
 
   return (
     <>
-      <Typography variant="h4">{title}</Typography>
+      {titleTooltip ? (
+        <Tooltip arrow placement="top" title={titleTooltip}>
+          <Box
+            component="span"
+            sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}
+          >
+            <Typography component="span" variant="h4">
+              {title}
+            </Typography>
+            <InfoOutlinedIcon
+              aria-label={`${title} information`}
+              fontSize="small"
+              sx={{ color: "text.secondary", cursor: "help" }}
+            />
+          </Box>
+        </Tooltip>
+      ) : (
+        <Typography variant="h4">{title}</Typography>
+      )}
       <Table aria-label={`${title} budget table`}>
         <TableHead>
           <TableRow>
-            <TableCell>Item</TableCell>
-            <TableCell align="right">Amount</TableCell>
+            <TableCell
+              sortDirection={sortColumn === "item" ? sortDirection : false}
+            >
+              <TableSortLabel
+                active={sortColumn === "item"}
+                direction={sortColumn === "item" ? sortDirection : "asc"}
+                onClick={() => handleSort("item")}
+              >
+                Item
+              </TableSortLabel>
+            </TableCell>
+            <TableCell
+              align="right"
+              sortDirection={sortColumn === "amount" ? sortDirection : false}
+            >
+              <TableSortLabel
+                active={sortColumn === "amount"}
+                direction={sortColumn === "amount" ? sortDirection : "asc"}
+                onClick={() => handleSort("amount")}
+              >
+                Amount
+              </TableSortLabel>
+            </TableCell>
+            {showDate && <TableCell>Date (optional)</TableCell>}
             <TableCell padding="checkbox" />
           </TableRow>
         </TableHead>
         <TableBody>
-          {items.map((entry, index) => (
+          {displayItems.map(({ entry, index }) => (
             <TableRow data-budget-row={entry.id} key={entry.id}>
               <TableCell>
                 {editingIds.has(entry.id) ? (
-                  <TextField
-                    aria-label={`${title} item ${index + 1}`}
-                    disabled={disabled}
-                    fullWidth
-                    slotProps={{ htmlInput: { maxLength: 200 } }}
-                    onBlur={(event) => handleRowBlur(event, entry)}
-                    onChange={(event) =>
-                      updateItem(index, { item: event.target.value })
-                    }
-                    size="small"
-                    value={entry.item}
-                  />
+                  accountSynced || readOnly ? (
+                    entry.item
+                  ) : (
+                    <TextField
+                      aria-label={`${title} item ${index + 1}`}
+                      disabled={disabled}
+                      fullWidth
+                      slotProps={{ htmlInput: { maxLength: 200 } }}
+                      onBlur={(event) => handleRowBlur(event, entry)}
+                      onChange={(event) =>
+                        updateItem(index, { item: event.target.value })
+                      }
+                      size="small"
+                      value={entry.item}
+                    />
+                  )
                 ) : (
                   entry.item
                 )}
@@ -146,9 +243,33 @@ export const DataTable = ({
                   `$${(Number(entry.amount) || 0).toFixed(2)}`
                 )}
               </TableCell>
+              {showDate && (
+                <TableCell>
+                  {editingIds.has(entry.id) ? (
+                    <TextField
+                      aria-label={`${title} date ${index + 1}`}
+                      disabled={disabled}
+                      fullWidth
+                      onBlur={(event) => handleRowBlur(event, entry)}
+                      onChange={(event) =>
+                        updateItem(index, {
+                          date: event.target.value || undefined,
+                        })
+                      }
+                      size="small"
+                      type="date"
+                      value={entry.date ?? ""}
+                    />
+                  ) : entry.date ? (
+                    <time dateTime={entry.date}>{entry.date}</time>
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
+              )}
               <TableCell padding="checkbox">
                 <Box sx={{ display: "flex", gap: 1 }}>
-                  {!editingIds.has(entry.id) && (
+                  {!readOnly && !editingIds.has(entry.id) && (
                     <IconButton
                       aria-label={`Edit ${entry.item || `row ${index + 1}`}`}
                       disabled={disabled}
@@ -158,16 +279,18 @@ export const DataTable = ({
                       <EditIcon fontSize="small" />
                     </IconButton>
                   )}
-                  <IconButton
-                    aria-label={`Remove ${entry.item || `row ${index + 1}`}`}
-                    disabled={disabled}
-                    onClick={() =>
-                      onChange(items.filter((item) => item.id !== entry.id))
-                    }
-                    size="small"
-                  >
-                    x
-                  </IconButton>
+                  {!readOnly && (
+                    <IconButton
+                      aria-label={`Remove ${entry.item || `row ${index + 1}`}`}
+                      disabled={disabled}
+                      onClick={() =>
+                        onChange(items.filter((item) => item.id !== entry.id))
+                      }
+                      size="small"
+                    >
+                      x
+                    </IconButton>
+                  )}
                 </Box>
               </TableCell>
             </TableRow>
@@ -181,23 +304,29 @@ export const DataTable = ({
                 ${total.toFixed(2)}
               </Typography>
             </TableCell>
+            {showDate && <TableCell />}
             <TableCell />
           </TableRow>
         </TableBody>
       </Table>
-      <Button
-        disabled={disabled || items.length >= 100}
-        onClick={() => {
-          const id = crypto.randomUUID();
-          const newItem = { id, item: "", amount: "" };
-          onChange([...items, newItem]);
-          startEditing(newItem);
-        }}
-        startIcon={<AddIcon />}
-        sx={{ mt: 1 }}
-      >
-        Add item
-      </Button>
+      {!readOnly && (onAddItem || !accountSynced) && (
+        <Button
+          disabled={disabled || addDisabled || items.length >= 100}
+          onClick={
+            onAddItem ??
+            (() => {
+              const id = crypto.randomUUID();
+              const newItem = { id, item: "", amount: "" };
+              onChange([...items, newItem]);
+              startEditing(newItem);
+            })
+          }
+          startIcon={<AddIcon />}
+          sx={{ mt: 1 }}
+        >
+          Add item
+        </Button>
+      )}
     </>
   );
 };

@@ -11,6 +11,7 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import { useState } from "react";
 import type { Account, AccountInput, AccountType } from "../lib/account-types";
+import { getApiErrorMessage, readApiJson } from "../lib/api-response";
 
 export const AddAccountDialog = ({
   open,
@@ -72,11 +73,15 @@ export const AddAccountDialog = ({
       });
 
       if (!response.ok) {
-        const result: { error?: string } = await response.json();
-        throw new Error(result.error ?? "Could not add this account.");
+        throw new Error(
+          await getApiErrorMessage(response, "Could not add this account"),
+        );
       }
 
-      const result: { account: Account } = await response.json();
+      const result = await readApiJson<{ account: Account }>(
+        response,
+        "Could not read the response after adding this account",
+      );
       onCreated(result.account);
       setName("");
       setType("asset");

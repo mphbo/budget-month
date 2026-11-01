@@ -14,3 +14,7 @@ export type AccountInput = {
   category: string;
   amount: string;
 };
+
+export type AccountUpdateInput = AccountInput & {
+  id: string;
+};
