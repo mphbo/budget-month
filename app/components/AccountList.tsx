@@ -254,16 +254,19 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
                 />
               </>
             ) : (
-              <>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  paddingRight: "60px",
+                }}
+              >
                 <ListItemText
                   primary={account.name}
                   secondary={`${account.category} · ${account.type}`}
-                  sx={{ m: 0 }}
                 />
-                <Typography sx={{ textAlign: "right" }}>
-                  ${Number(account.amount).toFixed(2)}
-                </Typography>
-              </>
+                <Typography>${Number(account.amount).toFixed(2)}</Typography>
+              </Box>
             )}
           </Stack>
           {!isEditing && (
@@ -307,13 +310,13 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
     <Box
       sx={{
         width: "100%",
-        maxWidth: 420,
+        maxWidth: 520,
         bgcolor: "background.paper",
         height: "100%",
-        p: 2,
+        p: 4,
       }}
     >
-      <Stack spacing={1}>
+      <Stack spacing={3}>
         {error && <Alert severity="error">{error}</Alert>}
         {savedMessage && <Alert severity="success">{savedMessage}</Alert>}
         <Typography variant="h4">Assets</Typography>
@@ -336,14 +339,14 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
           )}
         </List>
         <Divider />
-        <ListItem disablePadding>
+        <ListItem disablePadding sx={{ marginBottom: "20px" }}>
           <ListItemIcon sx={{ minWidth: 36 }}>
             <AccountBalanceIcon />
           </ListItemIcon>
           <ListItemText primary="Net total" />
           <Typography>${total.toFixed(2)}</Typography>
         </ListItem>
-        <Stack direction="row" spacing={1} sx={{ pt: 1 }}>
+        <Stack direction="row" spacing={1}>
           <Button
             disabled={isSaving}
             onClick={() => setIsAdding(true)}
