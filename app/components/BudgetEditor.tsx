@@ -190,7 +190,7 @@ export const BudgetEditor = ({
   };
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={5}>
       {error && <Alert severity="error">{error}</Alert>}
       {savedMessage && <Alert severity="success">{savedMessage}</Alert>}
       <Paper
