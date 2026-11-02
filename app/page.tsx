@@ -2,8 +2,13 @@ import { Box, Container, Typography } from "@mui/material";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { AccountList } from "./components/AccountList";
+import { EquityHistoryChart } from "./components/EquityHistoryChart";
 import { MonthList } from "./components/MonthList";
-import { getAccounts, getMonthNavigationData } from "./lib/budgets";
+import {
+  getAccounts,
+  getEquityHistory,
+  getMonthNavigationData,
+} from "./lib/budgets";
 import styles from "./page.module.css";
 
 const Home = () => {
@@ -17,8 +22,15 @@ const Home = () => {
 const HomeContent = async () => {
   await connection();
 
-  const [{ months, nextMonth, previousMonth, deletableMonths }, accounts] =
-    await Promise.all([getMonthNavigationData(), getAccounts()]);
+  const [
+    { months, nextMonth, previousMonth, deletableMonths },
+    accounts,
+    equityHistory,
+  ] = await Promise.all([
+    getMonthNavigationData(),
+    getAccounts(),
+    getEquityHistory(),
+  ]);
 
   return (
     <div className={styles.page}>
@@ -31,12 +43,14 @@ const HomeContent = async () => {
             Here is an overview of your finances, add/review accounts here or
             jump into one of your monthly budgets.
           </Typography>
+          <EquityHistoryChart accounts={accounts} points={equityHistory} />
           <Box
             sx={{
               display: "flex",
               justifyContent: "flex-start",
               gap: "40px",
-              flexWrap: "wrap",
+              marginTop: "40px",
+              flexWrap: { xs: "wrap", lg: "nowrap" },
             }}
           >
             <AccountList accounts={accounts} />

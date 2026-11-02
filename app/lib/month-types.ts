@@ -1,9 +1,13 @@
+import type { AccountCategory, AccountType } from "./account-types";
+
 export type MonthCreateMode = "copy" | "fresh";
 
 export type BudgetItem = {
   item: string;
   amount: number;
   accountId?: string;
+  accountType?: AccountType;
+  category?: AccountCategory;
   date?: string;
 };
 
@@ -20,6 +24,8 @@ export type BudgetItemInput = {
   item: string;
   amount: string;
   accountId?: string;
+  accountType?: AccountType;
+  category?: AccountCategory;
   date?: string;
 };
 
@@ -36,6 +42,11 @@ export type MonthBudget = {
 export type MonthOption = {
   slug: string;
   name: string;
+};
+
+export type EquityHistoryPoint = {
+  month: string;
+  categoryValues: Record<string, number>;
 };
 
 export type NextMonthOption = MonthOption & {

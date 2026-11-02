@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isAccountCategory } from "../../../lib/account-types";
 import {
   deleteMonth,
   getMonthBudget,
@@ -42,6 +43,15 @@ const isBudgetEntry = (
             entry.accountId,
           )
       : entry.accountId === undefined;
+  const validAccountClassification =
+    section === "totalEquity"
+      ? entry.accountType === undefined && entry.category === undefined
+        ? true
+        : (entry.accountType === "asset" ||
+            entry.accountType === "liability") &&
+          isAccountCategory(entry.category) &&
+          (!requireCurrentAccountLinks || entry.accountId !== undefined)
+      : entry.accountType === undefined && entry.category === undefined;
 
   return (
     validDate &&
@@ -50,7 +60,8 @@ const isBudgetEntry = (
     entry.item.trim().length <= 200 &&
     typeof entry.amount === "string" &&
     /^-?\d{1,12}(?:\.\d{1,2})?$/.test(entry.amount) &&
-    validAccountLink
+    validAccountLink &&
+    validAccountClassification
   );
 };
 

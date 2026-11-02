@@ -109,7 +109,7 @@ export const MonthList = ({
   };
 
   return (
-    <Box sx={{ width: "100%", maxWidth: 360, bgcolor: "background.paper" }}>
+    <Box sx={{ bgcolor: "background.paper", width: { xs: "100%", lg: "40%" } }}>
       {error && (
         <Alert severity="error" sx={{ mb: 1 }}>
           {error}

@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import type { AccountInput, AccountUpdateInput } from "../../lib/account-types";
+import {
+  type AccountInput,
+  type AccountUpdateInput,
+  isAccountCategory,
+} from "../../lib/account-types";
 import { createAccount, getAccounts, saveAccounts } from "../../lib/budgets";
 import { mutationErrorResponse } from "../errors";
 
@@ -14,9 +18,7 @@ const isAccountInput = (value: unknown): value is AccountInput => {
     account.name.trim().length > 0 &&
     account.name.trim().length <= 120 &&
     (account.type === "asset" || account.type === "liability") &&
-    typeof account.category === "string" &&
-    account.category.trim().length > 0 &&
-    account.category.trim().length <= 100 &&
+    isAccountCategory(account.category) &&
     typeof account.amount === "string" &&
     /^\d{1,12}(?:\.\d{1,2})?$/.test(account.amount)
   );

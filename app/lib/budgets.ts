@@ -7,8 +7,10 @@ import type {
   AccountType,
   AccountUpdateInput,
 } from "./account-types";
+import { parseAccountCategory } from "./account-types";
 import type {
   BudgetInput,
+  EquityHistoryPoint,
   MonthBudget,
   MonthCreateMode,
   MonthOption,
@@ -169,6 +171,100 @@ export const getMonthNavigationData = cache(async () => {
   };
 });
 
+export const getEquityHistory = async (): Promise<EquityHistoryPoint[]> => {
+  const { supabase, userId } = await getAuthorizedSupabaseClient();
+  const { data: months, error: monthsError } = await supabase
+    .from("budget_months")
+    .select("id, month_start")
+    .eq("user_id", userId)
+    .order("month_start", { ascending: true });
+
+  if (monthsError) {
+    throw monthsError;
+  }
+  const historicalMonths = months.filter(
+    (month) => month.month_start <= currentMonthStart(),
+  );
+  if (historicalMonths.length === 0) {
+    return [];
+  }
+
+  const { data: accounts, error: accountsError } = await supabase
+    .from("account_items")
+    .select("id, account_type, category, amount")
+    .eq("user_id", userId);
+
+  if (accountsError) {
+    throw accountsError;
+  }
+
+  const accountDetails = new Map(
+    accounts.map((account) => [
+      account.id,
+      {
+        type: account.account_type,
+        category: account.category,
+      },
+    ]),
+  );
+  const { data: equityItems, error: equityItemsError } = await supabase
+    .from("budget_items")
+    .select("month_id, account_id, account_type, category, amount")
+    .eq("user_id", userId)
+    .eq("section", "totalEquity")
+    .in(
+      "month_id",
+      historicalMonths.map((month) => month.id),
+    );
+
+  if (equityItemsError) {
+    throw equityItemsError;
+  }
+
+  const categoryValuesByMonth = new Map<string, Record<string, number>>();
+  for (const item of equityItems) {
+    const account = item.account_id
+      ? accountDetails.get(item.account_id)
+      : undefined;
+    const type =
+      account?.type ??
+      item.account_type ??
+      (Number(item.amount) < 0 ? "liability" : "asset");
+    const category = account?.category ?? item.category ?? "Other";
+    const signedAmount = account
+      ? account.type === "liability"
+        ? -Math.abs(Number(item.amount))
+        : Math.abs(Number(item.amount))
+      : Number(item.amount);
+    const key = `${type}:${category}`;
+    const categoryValues = categoryValuesByMonth.get(item.month_id) ?? {};
+    categoryValues[key] = (categoryValues[key] ?? 0) + signedAmount;
+    categoryValuesByMonth.set(item.month_id, categoryValues);
+  }
+
+  const currentMonth = historicalMonths.find(
+    (month) => month.month_start === currentMonthStart(),
+  );
+  if (currentMonth) {
+    const currentCategoryValues: Record<string, number> = {};
+    for (const account of accounts) {
+      const key = `${account.account_type}:${account.category}`;
+      const signedAmount =
+        account.account_type === "liability"
+          ? -Number(account.amount)
+          : Number(account.amount);
+      currentCategoryValues[key] =
+        (currentCategoryValues[key] ?? 0) + signedAmount;
+    }
+    categoryValuesByMonth.set(currentMonth.id, currentCategoryValues);
+  }
+
+  return historicalMonths.map((month) => ({
+    month: monthOption(month.month_start).name,
+    categoryValues: categoryValuesByMonth.get(month.id) ?? {},
+  }));
+};
+
 export const getAccounts = async (): Promise<Account[]> => {
   const { supabase, userId } = await getAuthorizedSupabaseClient();
   const { data, error } = await supabase
@@ -191,7 +287,7 @@ export const getAccounts = async (): Promise<Account[]> => {
       id: account.id,
       name: account.name,
       type,
-      category: account.category,
+      category: parseAccountCategory(account.category),
       amount: Number(account.amount),
     };
   });
@@ -309,7 +405,7 @@ export const createAccount = async (
     id: data.id,
     name: data.name,
     type: data.account_type,
-    category: data.category,
+    category: parseAccountCategory(data.category),
     amount: Number(data.amount),
   };
 };
@@ -425,7 +521,9 @@ export const getMonthBudget = async (
 
   const { data: items, error: itemsError } = await supabase
     .from("budget_items")
-    .select("section, name, amount, position, account_id, scheduled_date")
+    .select(
+      "section, name, amount, position, account_id, account_type, category, scheduled_date",
+    )
     .eq("user_id", userId)
     .eq("month_id", month.id)
     .order("position", { ascending: true });
@@ -461,17 +559,18 @@ export const getMonthBudget = async (
   }
 
   const isCurrent = month.month_start === currentMonthStart();
-  const { data: accounts, error: accountsError } = isCurrent
-    ? await supabase
-        .from("account_items")
-        .select("id, name, account_type, amount")
-        .eq("user_id", userId)
-        .order("sort_order", { ascending: true })
-    : { data: [], error: null };
+  const { data: accounts, error: accountsError } = await supabase
+    .from("account_items")
+    .select("id, name, account_type, category, amount")
+    .eq("user_id", userId)
+    .order("sort_order", { ascending: true });
 
   if (accountsError) {
     throw accountsError;
   }
+  const accountsById = new Map(
+    accounts.map((account) => [account.id, account]),
+  );
 
   const budget: MonthBudget = {
     name: monthOption(month.month_start).name,
@@ -486,10 +585,29 @@ export const getMonthBudget = async (
       (knownSection) => knownSection === item.section,
     );
     if (section && !(isCurrent && section === "totalEquity")) {
+      const account = item.account_id
+        ? accountsById.get(item.account_id)
+        : undefined;
       budget[section].push({
         item: item.name,
-        amount: Number(item.amount),
+        amount:
+          section === "totalEquity" && account
+            ? account.account_type === "liability"
+              ? -Math.abs(Number(item.amount))
+              : Math.abs(Number(item.amount))
+            : Number(item.amount),
         ...(item.account_id ? { accountId: item.account_id } : {}),
+        ...(account
+          ? {
+              accountType: account.account_type,
+              category: parseAccountCategory(account.category),
+            }
+          : item.account_type && item.category
+            ? {
+                accountType: item.account_type,
+                category: parseAccountCategory(item.category),
+              }
+            : {}),
         ...(item.scheduled_date ? { date: item.scheduled_date } : {}),
       });
     }
@@ -503,12 +621,19 @@ export const getMonthBudget = async (
           ? -Number(account.amount)
           : Number(account.amount),
       accountId: account.id,
+      accountType: account.account_type,
+      category: parseAccountCategory(account.category),
     }));
   }
 
   const previousEquity = previousItems.map((item) => ({
     item: item.name,
-    amount: Number(item.amount),
+    amount:
+      item.account_id && accountsById.has(item.account_id)
+        ? accountsById.get(item.account_id)?.account_type === "liability"
+          ? -Math.abs(Number(item.amount))
+          : Math.abs(Number(item.amount))
+        : Number(item.amount),
     ...(item.account_id ? { accountId: item.account_id } : {}),
   }));
   budget.equityChange = previousMonth
@@ -525,10 +650,31 @@ export const saveMonthBudget = async (slug: string, budget: BudgetInput) => {
   }
 
   const { supabase } = await getAuthorizedSupabaseClient();
-  const { error } = await supabase.rpc("save_budget_month", {
-    p_month_start: monthStart,
-    p_budget: budget,
-  });
+  const classificationsByAccountId = new Map(
+    budget.totalEquity.flatMap((entry) =>
+      entry.accountId && entry.accountType && entry.category
+        ? [
+            [
+              entry.accountId,
+              {
+                accountId: entry.accountId,
+                accountType: entry.accountType,
+                category: entry.category,
+              },
+            ] as const,
+          ]
+        : [],
+    ),
+  );
+  const classifications = [...classificationsByAccountId.values()];
+  const { error } = await supabase.rpc(
+    "save_budget_month_with_account_classifications",
+    {
+      p_month_start: monthStart,
+      p_budget: budget,
+      p_classifications: classifications,
+    },
+  );
 
   if (error) {
     throw error;

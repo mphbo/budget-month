@@ -69,11 +69,15 @@ const toBudgetInput = (budget: EditableBudget): BudgetInput => {
       item,
       amount,
     })),
-    totalEquity: budget.totalEquity.map(({ item, amount, accountId }) => ({
-      item,
-      amount,
-      ...(accountId ? { accountId } : {}),
-    })),
+    totalEquity: budget.totalEquity.map(
+      ({ item, amount, accountId, accountType, category }) => ({
+        item,
+        amount,
+        ...(accountId ? { accountId } : {}),
+        ...(accountType ? { accountType } : {}),
+        ...(category ? { category } : {}),
+      }),
+    ),
   };
 };
 
@@ -82,14 +86,18 @@ const getBudgetSnapshot = (budget: BudgetInput) =>
     Object.fromEntries(
       (Object.keys(sectionTitles) as BudgetSection[]).map((section) => [
         section,
-        budget[section].map(({ item, amount, accountId, date }) => ({
-          item: item.trim(),
-          amount: /^-?\d{1,12}(?:\.\d{1,2})?$/.test(amount)
-            ? Number(amount).toFixed(2)
-            : amount,
-          ...(accountId ? { accountId } : {}),
-          ...(date ? { date } : {}),
-        })),
+        budget[section].map(
+          ({ item, amount, accountId, accountType, category, date }) => ({
+            item: item.trim(),
+            amount: /^-?\d{1,12}(?:\.\d{1,2})?$/.test(amount)
+              ? Number(amount).toFixed(2)
+              : amount,
+            ...(accountId ? { accountId } : {}),
+            ...(accountType ? { accountType } : {}),
+            ...(category ? { category } : {}),
+            ...(date ? { date } : {}),
+          }),
+        ),
       ]),
     ),
   );
@@ -186,11 +194,17 @@ export const BudgetEditor = ({
 
         const change = equityChanges.get(previous.accountId);
         const next = nextItemsByAccountId.get(previous.accountId);
-        const nextChange =
-          Number(change?.amount ?? 0) +
-          (next
-            ? Number(next.amount) - Number(previous.amount)
-            : -Number(previous.amount));
+        const previousAmount =
+          Number(previous.amount) - Number(change?.amount ?? 0);
+        const adjustedPreviousAmount =
+          next?.accountType && next.accountType !== previous.accountType
+            ? next.accountType === "liability"
+              ? -Math.abs(previousAmount)
+              : Math.abs(previousAmount)
+            : previousAmount;
+        const nextChange = next
+          ? Number(next.amount) - adjustedPreviousAmount
+          : -previousAmount;
 
         if (nextChange === 0) {
           equityChanges.delete(previous.accountId);
@@ -350,6 +364,7 @@ export const BudgetEditor = ({
           <Grid key={`${section}-${savedVersion}`} size={{ xs: 12, md: 6 }}>
             <DataTable
               accountSynced={isCurrentMonth && section === "totalEquity"}
+              showAccountClassification={section === "totalEquity"}
               disabled={isSaving}
               items={draft[section]}
               onChange={(items) => updateSection(section, items)}
@@ -369,10 +384,10 @@ export const BudgetEditor = ({
               titleTooltip={
                 section === "totalEquity"
                   ? isCurrentMonth
-                    ? "This month’s equity balances are synced with Accounts. Edit balances or delete accounts here; liabilities are negative. Changes apply when you save."
+                    ? "This month’s equity balances are synced with Accounts. Edit balances or delete accounts here; liabilities are negative. Type and category changes update the account globally across all months when saved."
                     : isFutureMonth
-                      ? "This is a planned equity estimate for a future month. It does not sync with Accounts."
-                      : "This is a historical snapshot. Changes here do not affect Accounts."
+                      ? "This is a planned equity estimate for a future month. Balance changes do not sync with Accounts, but type and category changes update the account globally across all months when saved."
+                      : "This is a historical snapshot. Balance changes do not affect Accounts, but type and category changes update the account globally across all months when saved."
                   : section === "equityChange"
                     ? "Calculated per item as this month’s Total Equity minus the previous month’s Total Equity. Positive amounts are increases; negative amounts are decreases."
                     : undefined
@@ -390,10 +405,10 @@ export const BudgetEditor = ({
       )}
       <Alert severity="info">
         {isCurrentMonth
-          ? "Total Equity balances sync with Accounts for this month. Add, edit, or delete accounts here, or manage accounts on the home page. Liabilities are negative. Equity Change compares this month with the previous month."
+          ? "Total Equity balances sync with Accounts for this month. Add, edit, or delete accounts here, or manage accounts on the home page. Liabilities are negative. Type and category changes update the account globally across all months when saved. Equity Change compares this month with the previous month."
           : isFutureMonth
-            ? "Total Equity is a planned estimate for this future month and does not sync with Accounts. Equity Change compares it with the previous month's Total Equity."
-            : "This month is a historical snapshot. Equity Change compares its Total Equity with the previous month's snapshot; edits won't affect Accounts."}
+            ? "Total Equity is a planned estimate for this future month and does not sync with Accounts. Type and category changes update the account globally across all months when saved. Equity Change compares it with the previous month's Total Equity."
+            : "This month is a historical snapshot. Balance edits won't affect Accounts, but type and category changes update the account globally across all months when saved. Equity Change compares its Total Equity with the previous month's snapshot."}
       </Alert>
       {savedMessage && <Alert severity="success">{savedMessage}</Alert>}
       <div>

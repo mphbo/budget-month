@@ -16,12 +16,16 @@ import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
+import type { AccountCategory, AccountType } from "../lib/account-types";
+import { TotalEquityItemDialog } from "./TotalEquityItemDialog";
 
 export type EditableBudgetItem = {
   id: string;
   item: string;
   amount: string;
   accountId?: string;
+  accountType?: AccountType;
+  category?: AccountCategory;
   date?: string;
 };
 
@@ -39,6 +43,7 @@ export const DataTable = ({
   onAddItem,
   addDisabled = false,
   showDate = false,
+  showAccountClassification = false,
 }: {
   title: string;
   items: EditableBudgetItem[];
@@ -50,8 +55,12 @@ export const DataTable = ({
   onAddItem?: () => void;
   addDisabled?: boolean;
   showDate?: boolean;
+  showAccountClassification?: boolean;
 }) => {
   const [editingIds, setEditingIds] = useState<Set<string>>(() => new Set());
+  const [equityDialogItem, setEquityDialogItem] =
+    useState<EditableBudgetItem | null>(null);
+  const [isAddingEquityItem, setIsAddingEquityItem] = useState(false);
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const total = items.reduce((sum, entry) => {
@@ -97,9 +106,15 @@ export const DataTable = ({
 
     const handleDocumentPointerDown = (event: PointerEvent) => {
       const target = event.target;
+      if (target instanceof Element && target.closest("[role='listbox']")) {
+        return;
+      }
+
       const editingRow =
         target instanceof Element
-          ? target.closest("input")?.closest("[data-budget-row]")
+          ? target
+              .closest("input, [role='combobox']")
+              ?.closest("[data-budget-row]")
           : null;
       const rowId = editingRow?.getAttribute("data-budget-row");
 
@@ -182,6 +197,12 @@ export const DataTable = ({
                 Item
               </TableSortLabel>
             </TableCell>
+            {showAccountClassification && (
+              <>
+                <TableCell>Type</TableCell>
+                <TableCell>Category</TableCell>
+              </>
+            )}
             <TableCell
               align="right"
               sortDirection={sortColumn === "amount" ? sortDirection : false}
@@ -202,7 +223,7 @@ export const DataTable = ({
           {displayItems.map(({ entry, index }) => (
             <TableRow data-budget-row={entry.id} key={entry.id}>
               <TableCell>
-                {editingIds.has(entry.id) ? (
+                {editingIds.has(entry.id) && !showAccountClassification ? (
                   accountSynced || readOnly ? (
                     entry.item
                   ) : (
@@ -223,8 +244,20 @@ export const DataTable = ({
                   entry.item
                 )}
               </TableCell>
+              {showAccountClassification && (
+                <>
+                  <TableCell>
+                    {entry.accountType === "asset"
+                      ? "Asset"
+                      : entry.accountType === "liability"
+                        ? "Liability"
+                        : "—"}
+                  </TableCell>
+                  <TableCell>{entry.category ?? "—"}</TableCell>
+                </>
+              )}
               <TableCell align="right">
-                {editingIds.has(entry.id) ? (
+                {editingIds.has(entry.id) && !showAccountClassification ? (
                   <TextField
                     aria-label={`${title} amount ${index + 1}`}
                     disabled={disabled}
@@ -269,16 +302,24 @@ export const DataTable = ({
               )}
               <TableCell padding="checkbox">
                 <Box sx={{ display: "flex", gap: 1 }}>
-                  {!readOnly && !editingIds.has(entry.id) && (
-                    <IconButton
-                      aria-label={`Edit ${entry.item || `row ${index + 1}`}`}
-                      disabled={disabled}
-                      onClick={() => startEditing(entry)}
-                      size="small"
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  )}
+                  {!readOnly &&
+                    (showAccountClassification ||
+                      !editingIds.has(entry.id)) && (
+                      <IconButton
+                        aria-label={`Edit ${entry.item || `row ${index + 1}`}`}
+                        disabled={disabled}
+                        onClick={() => {
+                          if (showAccountClassification) {
+                            setEquityDialogItem(entry);
+                          } else {
+                            startEditing(entry);
+                          }
+                        }}
+                        size="small"
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    )}
                   {!readOnly && (
                     <IconButton
                       aria-label={`Remove ${entry.item || `row ${index + 1}`}`}
@@ -299,6 +340,12 @@ export const DataTable = ({
             <TableCell>
               <Typography sx={{ fontWeight: "bold" }}>Total</Typography>
             </TableCell>
+            {showAccountClassification && (
+              <>
+                <TableCell />
+                <TableCell />
+              </>
+            )}
             <TableCell align="right">
               <Typography sx={{ fontWeight: "bold" }}>
                 ${total.toFixed(2)}
@@ -314,18 +361,43 @@ export const DataTable = ({
           disabled={disabled || addDisabled || items.length >= 100}
           onClick={
             onAddItem ??
-            (() => {
-              const id = crypto.randomUUID();
-              const newItem = { id, item: "", amount: "" };
-              onChange([...items, newItem]);
-              startEditing(newItem);
-            })
+            (showAccountClassification
+              ? () => setIsAddingEquityItem(true)
+              : () => {
+                  const id = crypto.randomUUID();
+                  const newItem = { id, item: "", amount: "" };
+                  onChange([...items, newItem]);
+                  startEditing(newItem);
+                })
           }
           startIcon={<AddIcon />}
           sx={{ mt: 1 }}
         >
           Add item
         </Button>
+      )}
+      {showAccountClassification && (
+        <TotalEquityItemDialog
+          accountSynced={accountSynced}
+          disabled={disabled}
+          item={equityDialogItem}
+          onClose={() => {
+            setEquityDialogItem(null);
+            setIsAddingEquityItem(false);
+          }}
+          onSave={(updatedItem) => {
+            if (equityDialogItem) {
+              onChange(
+                items.map((item) =>
+                  item.id === updatedItem.id ? updatedItem : item,
+                ),
+              );
+            } else {
+              onChange([...items, updatedItem]);
+            }
+          }}
+          open={Boolean(equityDialogItem) || isAddingEquityItem}
+        />
       )}
     </>
   );

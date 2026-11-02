@@ -28,6 +28,9 @@ import type {
 import {
   getAccountCategories,
   getDefaultAccountCategory,
+  isFixedAssetCategory,
+  LIABILITY_CATEGORIES,
+  parseAccountCategory,
 } from "../lib/account-types";
 import { getApiErrorMessage } from "../lib/api-response";
 import { AddAccountDialog } from "./AddAccountDialog";
@@ -81,12 +84,21 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
   const isDirty =
     accountSnapshot(draft.map(toAccountInput)) !==
     accountSnapshot(savedAccounts);
+
   const total =
     assets.reduce((sum, account) => sum + (Number(account.amount) || 0), 0) -
     liabilities.reduce(
       (sum, account) => sum + (Number(account.amount) || 0),
       0,
     );
+
+  const totalWithoutFixedAssets =
+    assets
+      .filter((account) => !isFixedAssetCategory(account.category))
+      .reduce((sum, account) => sum + (Number(account.amount) || 0), 0) -
+    liabilities
+      .filter((account) => account.category !== LIABILITY_CATEGORIES.mortgage)
+      .reduce((sum, account) => sum + (Number(account.amount) || 0), 0);
 
   useEffect(() => {
     if (editingIds.size === 0) {
@@ -246,7 +258,9 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
                   fullWidth
                   label="Category"
                   onChange={(event) =>
-                    updateAccount(account.id, { category: event.target.value })
+                    updateAccount(account.id, {
+                      category: parseAccountCategory(event.target.value),
+                    })
                   }
                   size="small"
                   select
@@ -337,11 +351,10 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
   return (
     <Box
       sx={{
-        width: "100%",
-        maxWidth: 520,
         bgcolor: "background.paper",
         height: "100%",
         p: 4,
+        width: { xs: "100%", lg: "60%" },
       }}
     >
       <Stack spacing={3}>
@@ -370,7 +383,20 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
           <ListItemIcon sx={{ minWidth: 36 }}>
             <AccountBalanceIcon />
           </ListItemIcon>
-          <ListItemText primary="Net total" />
+          <ListItemText
+            primary="Net total"
+            secondary="Excludes house, car & mortgage"
+          />
+          <Typography>${totalWithoutFixedAssets.toFixed(2)}</Typography>
+        </ListItem>
+        <ListItem disablePadding sx={{ marginBottom: "20px" }}>
+          <ListItemIcon sx={{ minWidth: 36 }}>
+            <AccountBalanceIcon />
+          </ListItemIcon>
+          <ListItemText
+            primary="Net total"
+            secondary="Includes house, car & mortgage"
+          />
           <Typography>${total.toFixed(2)}</Typography>
         </ListItem>
         <Alert severity="info">

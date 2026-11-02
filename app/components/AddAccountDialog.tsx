@@ -10,10 +10,16 @@ import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import { useState } from "react";
-import type { Account, AccountInput, AccountType } from "../lib/account-types";
+import type {
+  Account,
+  AccountCategory,
+  AccountInput,
+  AccountType,
+} from "../lib/account-types";
 import {
   getAccountCategories,
   getDefaultAccountCategory,
+  parseAccountCategory,
 } from "../lib/account-types";
 import { getApiErrorMessage, readApiJson } from "../lib/api-response";
 
@@ -28,7 +34,9 @@ export const AddAccountDialog = ({
 }) => {
   const [name, setName] = useState("");
   const [type, setType] = useState<AccountType>("asset");
-  const [category, setCategory] = useState(getDefaultAccountCategory("asset"));
+  const [category, setCategory] = useState<AccountCategory>(
+    getDefaultAccountCategory("asset"),
+  );
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -54,7 +62,7 @@ export const AddAccountDialog = ({
     const account: AccountInput = {
       name: name.trim(),
       type,
-      category: category.trim(),
+      category: parseAccountCategory(category.trim()),
       amount,
     };
 
@@ -142,7 +150,9 @@ export const AddAccountDialog = ({
             <TextField
               fullWidth
               label="Category"
-              onChange={(event) => setCategory(event.target.value)}
+              onChange={(event) =>
+                setCategory(parseAccountCategory(event.target.value))
+              }
               required
               select
               value={category}
