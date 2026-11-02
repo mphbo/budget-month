@@ -11,6 +11,10 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import { useState } from "react";
 import type { Account, AccountInput, AccountType } from "../lib/account-types";
+import {
+  getAccountCategories,
+  getDefaultAccountCategory,
+} from "../lib/account-types";
 import { getApiErrorMessage, readApiJson } from "../lib/api-response";
 
 export const AddAccountDialog = ({
@@ -24,10 +28,11 @@ export const AddAccountDialog = ({
 }) => {
   const [name, setName] = useState("");
   const [type, setType] = useState<AccountType>("asset");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState(getDefaultAccountCategory("asset"));
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const categories = getAccountCategories(type, category);
 
   const closeDialog = () => {
     if (isCreating) {
@@ -36,7 +41,7 @@ export const AddAccountDialog = ({
 
     setName("");
     setType("asset");
-    setCategory("");
+    setCategory(getDefaultAccountCategory("asset"));
     setAmount("");
     setError(null);
     onClose();
@@ -85,7 +90,7 @@ export const AddAccountDialog = ({
       onCreated(result.account);
       setName("");
       setType("asset");
-      setCategory("");
+      setCategory(getDefaultAccountCategory("asset"));
       setAmount("");
       onClose();
     } catch (createError) {
@@ -123,7 +128,9 @@ export const AddAccountDialog = ({
                   event.target.value === "asset" ||
                   event.target.value === "liability"
                 ) {
-                  setType(event.target.value);
+                  const nextType = event.target.value;
+                  setType(nextType);
+                  setCategory(getDefaultAccountCategory(nextType));
                 }
               }}
               select
@@ -137,9 +144,15 @@ export const AddAccountDialog = ({
               label="Category"
               onChange={(event) => setCategory(event.target.value)}
               required
-              slotProps={{ htmlInput: { maxLength: 100 } }}
+              select
               value={category}
-            />
+            >
+              {categories.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </TextField>
             <TextField
               fullWidth
               label="Amount"

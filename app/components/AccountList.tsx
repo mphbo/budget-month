@@ -19,13 +19,17 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
-import { getApiErrorMessage } from "../lib/api-response";
 import type {
   Account,
   AccountInput,
   AccountType,
   AccountUpdateInput,
 } from "../lib/account-types";
+import {
+  getAccountCategories,
+  getDefaultAccountCategory,
+} from "../lib/account-types";
+import { getApiErrorMessage } from "../lib/api-response";
 import { AddAccountDialog } from "./AddAccountDialog";
 
 type EditableAccount = Omit<Account, "amount"> & { amount: string };
@@ -225,6 +229,7 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
                     ) {
                       updateAccount(account.id, {
                         type: event.target.value as AccountType,
+                        category: getDefaultAccountCategory(event.target.value),
                       });
                     }
                   }}
@@ -244,8 +249,17 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
                     updateAccount(account.id, { category: event.target.value })
                   }
                   size="small"
+                  select
                   value={account.category}
-                />
+                >
+                  {getAccountCategories(account.type, account.category).map(
+                    (category) => (
+                      <MenuItem key={category} value={category}>
+                        {category}
+                      </MenuItem>
+                    ),
+                  )}
+                </TextField>
                 <TextField
                   aria-label={`Account amount ${index + 1}`}
                   disabled={isSaving}
