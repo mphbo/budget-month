@@ -8,7 +8,11 @@ const SignupPage = () => {
     <Container maxWidth="sm" sx={{ py: 8 }}>
       <Stack spacing={3}>
         <Typography variant="h1">Create account</Typography>
-        <AuthForm action={signUp} submitLabel="Create account" />
+        <AuthForm
+          action={signUp}
+          submitLabel="Create account"
+          requireStrongPassword
+        />
         <Typography>
           Already registered?{" "}
           <NextLink href="/login" style={{ textDecoration: "underline" }}>

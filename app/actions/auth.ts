@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { hasStrongPassword } from "../lib/password";
 import { createSupabaseServerClient } from "../lib/supabase/server";
 
 export type AuthFormState = {
@@ -61,6 +62,14 @@ export const signUp = async (
   _previousState: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> => {
+  const password = formData.get("password");
+  if (typeof password !== "string" || !hasStrongPassword(password)) {
+    return {
+      error:
+        "Password must be 8-128 characters and include an uppercase letter and a symbol.",
+    };
+  }
+
   const credentials = getCredentials(formData);
   if (!credentials) {
     return {
