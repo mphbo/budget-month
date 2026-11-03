@@ -1,32 +1,21 @@
 {
   "name": "budget-month",
-  "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/web",
+    "apps/mobile"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev:web": "npm run dev --workspace @budget-month/web",
+    "build:web": "npm run build --workspace @budget-month/web",
+    "start:web": "npm run start --workspace @budget-month/web",
+    "dev:mobile": "npm run start --workspace @budget-month/mobile",
+    "android": "npm run android --workspace @budget-month/mobile",
+    "ios": "npm run ios --workspace @budget-month/mobile",
     "lint": "biome check",
     "format": "biome format --write"
   },
-  "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
-    "@fontsource/roboto": "^5.3.0",
-    "@mui/icons-material": "^9.5.0",
-    "@mui/material": "^9.5.0",
-    "@mui/material-nextjs": "^9.5.0",
-    "@supabase/ssr": "^0.12.7",
-    "@supabase/supabase-js": "^2.118.0",
-    "next": "16.4.3",
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
-  },
   "devDependencies": {
-    "@biomejs/biome": "2.4.2",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "typescript": "^5"
+    "@biomejs/biome": "2.4.2"
   }
 }
