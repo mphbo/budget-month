@@ -1,0 +1,146 @@
+import * as Linking from "expo-linking";
+import { useState } from "react";
+import { KeyboardAvoidingView, Platform, Text, View } from "react-native";
+import {
+  Button,
+  Card,
+  colors,
+  Field,
+  Heading,
+  Notice,
+  Page,
+  TextButton,
+} from "../components/ui";
+import { useAuth } from "../lib/auth";
+import { getSupabase } from "../lib/supabase";
+
+export default function LoginScreen() {
+  const { error: configError } = useAuth();
+  const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    setError(null);
+    setMessage(null);
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setError("Enter a valid email address.");
+      return;
+    }
+    if (password.length < 8 || password.length > 128) {
+      setError("Password must be between 8 and 128 characters.");
+      return;
+    }
+    if (
+      mode === "signUp" &&
+      (!/[A-Z]/.test(password) || !/[^A-Za-z0-9]/.test(password))
+    ) {
+      setError("For sign-up, include an uppercase letter and a symbol.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const supabase = getSupabase();
+      if (mode === "signIn") {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password,
+        });
+        if (signInError)
+          throw new Error("Could not sign in with those credentials.");
+      } else {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: normalizedEmail,
+          password,
+          options: { emailRedirectTo: Linking.createURL("auth/callback") },
+        });
+        if (signUpError)
+          throw new Error(
+            "Could not create an account. Check the email and try again.",
+          );
+        if (!data.session) {
+          setMessage(
+            "Check your email for a confirmation link. It will return you to Budget Month.",
+          );
+        }
+      }
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Authentication failed. Try again.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Page scroll={false}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1, justifyContent: "center" }}
+      >
+        <View style={{ gap: 22 }}>
+          <Heading subtitle="A clear view of your money, month by month.">
+            Budget Month
+          </Heading>
+          <Card>
+            <Text
+              style={{ color: colors.text, fontSize: 20, fontWeight: "700" }}
+            >
+              {mode === "signIn" ? "Welcome back" : "Create your account"}
+            </Text>
+            {configError ? <Notice kind="error">{configError}</Notice> : null}
+            {error ? <Notice kind="error">{error}</Notice> : null}
+            {message ? <Notice kind="success">{message}</Notice> : null}
+            <Field
+              autoCapitalize="none"
+              autoComplete="email"
+              keyboardType="email-address"
+              label="Email"
+              onChangeText={setEmail}
+              value={email}
+            />
+            <Field
+              autoCapitalize="none"
+              autoComplete={
+                mode === "signIn" ? "current-password" : "new-password"
+              }
+              label="Password"
+              onChangeText={setPassword}
+              secureTextEntry
+              value={password}
+            />
+            {mode === "signUp" ? (
+              <Text style={{ color: colors.muted, lineHeight: 20 }}>
+                Use at least 8 characters, including an uppercase letter and a
+                symbol.
+              </Text>
+            ) : null}
+            <Button busy={busy} onPress={() => void submit()}>
+              {mode === "signIn" ? "Sign in" : "Create account"}
+            </Button>
+            <TextButton
+              disabled={busy}
+              onPress={() => {
+                setError(null);
+                setMessage(null);
+                setMode(mode === "signIn" ? "signUp" : "signIn");
+              }}
+            >
+              {mode === "signIn"
+                ? "New here? Create an account"
+                : "Already have an account? Sign in"}
+            </TextButton>
+          </Card>
+        </View>
+      </KeyboardAvoidingView>
+    </Page>
+  );
+}

@@ -1,7 +1,7 @@
 "use client";
 
-import MenuIcon from "@mui/icons-material/Menu";
 import EditCalendarIcon from "@mui/icons-material/EditCalendar";
+import MenuIcon from "@mui/icons-material/Menu";
 import {
   Box,
   Button,
