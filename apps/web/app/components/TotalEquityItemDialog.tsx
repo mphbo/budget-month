@@ -17,7 +17,7 @@ import {
   parseAccountCategory,
 } from "../lib/account-types";
 import { AmountField } from "./AmountField";
-import type { EditableBudgetItem } from "./DataTable";
+import type { EditableBudgetItem } from "../month/[month]/components/BudgetEditor/components/DataTable";
 
 export const TotalEquityItemDialog = ({
   open,

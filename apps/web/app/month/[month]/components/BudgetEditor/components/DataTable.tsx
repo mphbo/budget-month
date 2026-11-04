@@ -16,11 +16,10 @@ import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
-import type { AccountCategory, AccountType } from "../lib/account-types";
-import { formatCurrency } from "../lib/formatting";
-import { AmountField } from "./AmountField";
-import { TotalEquityItemDialog } from "./TotalEquityItemDialog";
-import { UnsavedChangesIndicator } from "./UnsavedChangesIndicator";
+import { AmountField } from "@/app/components/AmountField";
+import { UnsavedChangesIndicator } from "@/app/components/UnsavedChangesIndicator";
+import type { AccountCategory, AccountType } from "@/app/lib/account-types";
+import { formatCurrency } from "@/app/lib/formatting";
 
 export type EditableBudgetItem = {
   id: string;
@@ -40,32 +39,21 @@ export const DataTable = ({
   items,
   onChange,
   disabled,
-  accountSynced = false,
   readOnly = false,
   titleTooltip,
-  onAddItem,
-  addDisabled = false,
   showDate = false,
-  showAccountClassification = false,
   hasUnsavedChanges = false,
 }: {
   title: string;
   items: EditableBudgetItem[];
   onChange: (items: EditableBudgetItem[]) => void;
   disabled: boolean;
-  accountSynced?: boolean;
   readOnly?: boolean;
   titleTooltip?: string;
-  onAddItem?: () => void;
-  addDisabled?: boolean;
   showDate?: boolean;
-  showAccountClassification?: boolean;
   hasUnsavedChanges?: boolean;
 }) => {
   const [editingIds, setEditingIds] = useState<Set<string>>(() => new Set());
-  const [equityDialogItem, setEquityDialogItem] =
-    useState<EditableBudgetItem | null>(null);
-  const [isAddingEquityItem, setIsAddingEquityItem] = useState(false);
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const total = items.reduce((sum, entry) => {
@@ -135,16 +123,10 @@ export const DataTable = ({
       document.removeEventListener("pointerdown", handleDocumentPointerDown);
   }, [editingIds]);
 
-  const updateItem = (index: number, patch: Partial<EditableBudgetItem>) => {
+  const updateItem = (id: string, patch: Partial<EditableBudgetItem>) => {
     onChange(
-      items.map((entry, entryIndex) =>
-        entryIndex === index ? { ...entry, ...patch } : entry,
-      ),
+      items.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)),
     );
-  };
-
-  const startEditing = (entry: EditableBudgetItem) => {
-    setEditingIds((current) => new Set(current).add(entry.id));
   };
 
   const handleRowBlur = (
@@ -215,12 +197,6 @@ export const DataTable = ({
                 Item
               </TableSortLabel>
             </TableCell>
-            {showAccountClassification && (
-              <>
-                <TableCell>Type</TableCell>
-                <TableCell>Category</TableCell>
-              </>
-            )}
             <TableCell
               align="right"
               sortDirection={sortColumn === "amount" ? sortDirection : false}
@@ -241,48 +217,34 @@ export const DataTable = ({
           {displayItems.map(({ entry, index }) => (
             <TableRow data-budget-row={entry.id} key={entry.id}>
               <TableCell>
-                {editingIds.has(entry.id) && !showAccountClassification ? (
-                  accountSynced || readOnly ? (
-                    entry.item
-                  ) : (
-                    <TextField
-                      aria-label={`${title} item ${index + 1}`}
-                      disabled={disabled}
-                      fullWidth
-                      slotProps={{ htmlInput: { maxLength: 200 } }}
-                      onBlur={(event) => handleRowBlur(event, entry)}
-                      onChange={(event) =>
-                        updateItem(index, { item: event.target.value })
-                      }
-                      size="small"
-                      value={entry.item}
-                    />
-                  )
+                {editingIds.has(entry.id) ? (
+                  <TextField
+                    aria-label={`${title} item ${index + 1}`}
+                    disabled={disabled}
+                    fullWidth
+                    slotProps={{ htmlInput: { maxLength: 200 } }}
+                    onBlur={(event) => handleRowBlur(event, entry)}
+                    onChange={(event) =>
+                      updateItem(entry.id, { item: event.target.value })
+                    }
+                    size="small"
+                    value={entry.item}
+                  />
                 ) : (
                   entry.item
                 )}
               </TableCell>
-              {showAccountClassification && (
-                <>
-                  <TableCell>
-                    {entry.accountType === "asset"
-                      ? "Asset"
-                      : entry.accountType === "liability"
-                        ? "Liability"
-                        : "—"}
-                  </TableCell>
-                  <TableCell>{entry.category ?? "—"}</TableCell>
-                </>
-              )}
               <TableCell align="right">
-                {editingIds.has(entry.id) && !showAccountClassification ? (
+                {editingIds.has(entry.id) ? (
                   <AmountField
                     allowNegative
                     aria-label={`${title} amount ${index + 1}`}
                     disabled={disabled}
                     fullWidth
                     onBlur={(event) => handleRowBlur(event, entry)}
-                    onAmountChange={(amount) => updateItem(index, { amount })}
+                    onAmountChange={(amount) =>
+                      updateItem(entry.id, { amount })
+                    }
                     size="small"
                     value={entry.amount}
                   />
@@ -299,7 +261,7 @@ export const DataTable = ({
                       fullWidth
                       onBlur={(event) => handleRowBlur(event, entry)}
                       onChange={(event) =>
-                        updateItem(index, {
+                        updateItem(entry.id, {
                           date: event.target.value || undefined,
                         })
                       }
@@ -316,24 +278,20 @@ export const DataTable = ({
               )}
               <TableCell padding="checkbox">
                 <Box sx={{ display: "flex", gap: 1 }}>
-                  {!readOnly &&
-                    (showAccountClassification ||
-                      !editingIds.has(entry.id)) && (
-                      <IconButton
-                        aria-label={`Edit ${entry.item || `row ${index + 1}`}`}
-                        disabled={disabled}
-                        onClick={() => {
-                          if (showAccountClassification) {
-                            setEquityDialogItem(entry);
-                          } else {
-                            startEditing(entry);
-                          }
-                        }}
-                        size="small"
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    )}
+                  {!readOnly && !editingIds.has(entry.id) && (
+                    <IconButton
+                      aria-label={`Edit ${entry.item || `row ${index + 1}`}`}
+                      disabled={disabled}
+                      onClick={() =>
+                        setEditingIds((current) =>
+                          new Set(current).add(entry.id),
+                        )
+                      }
+                      size="small"
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  )}
                   {!readOnly && (
                     <IconButton
                       aria-label={`Remove ${entry.item || `row ${index + 1}`}`}
@@ -354,12 +312,6 @@ export const DataTable = ({
             <TableCell>
               <Typography sx={{ fontWeight: "bold" }}>Total</Typography>
             </TableCell>
-            {showAccountClassification && (
-              <>
-                <TableCell />
-                <TableCell />
-              </>
-            )}
             <TableCell align="right">
               <Typography sx={{ fontWeight: "bold" }}>
                 {formatCurrency(total)}
@@ -370,51 +322,19 @@ export const DataTable = ({
           </TableRow>
         </TableBody>
       </Table>
-      {!readOnly && (onAddItem || !accountSynced) && (
+      {!readOnly && (
         <Button
-          disabled={disabled || addDisabled || items.length >= 100}
-          onClick={
-            onAddItem ??
-            (showAccountClassification
-              ? () => setIsAddingEquityItem(true)
-              : () => {
-                  const id = crypto.randomUUID();
-                  const newItem = { id, item: "", amount: "" };
-                  onChange([...items, newItem]);
-                  startEditing(newItem);
-                })
-          }
+          disabled={disabled || items.length >= 100}
+          onClick={() => {
+            const id = crypto.randomUUID();
+            onChange([...items, { id, item: "", amount: "" }]);
+            setEditingIds((current) => new Set(current).add(id));
+          }}
           startIcon={<AddIcon />}
           sx={{ mt: 1 }}
         >
           Add item
         </Button>
-      )}
-      {showAccountClassification && (
-        <TotalEquityItemDialog
-          accountSynced={accountSynced}
-          disabled={disabled}
-          existingNames={items
-            .filter((item) => item.id !== equityDialogItem?.id)
-            .map((item) => item.item)}
-          item={equityDialogItem}
-          onClose={() => {
-            setEquityDialogItem(null);
-            setIsAddingEquityItem(false);
-          }}
-          onSave={(updatedItem) => {
-            if (equityDialogItem) {
-              onChange(
-                items.map((item) =>
-                  item.id === updatedItem.id ? updatedItem : item,
-                ),
-              );
-            } else {
-              onChange([...items, updatedItem]);
-            }
-          }}
-          open={Boolean(equityDialogItem) || isAddingEquityItem}
-        />
       )}
     </>
   );

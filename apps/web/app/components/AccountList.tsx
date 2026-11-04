@@ -40,6 +40,7 @@ import { formatCurrency } from "../lib/formatting";
 import { AddAccountDialog } from "./AddAccountDialog";
 import { AmountField } from "./AmountField";
 import { UnsavedChangesIndicator } from "./UnsavedChangesIndicator";
+import { ResetChanges } from "./ResetChanges";
 
 type EditableAccount = Omit<Account, "amount"> & { amount: string };
 
@@ -469,17 +470,10 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
               </IconButton>
             </span>
           </Tooltip>
-          <Tooltip title="Reset unsaved changes">
-            <span>
-              <IconButton
-                aria-label="Reset unsaved changes"
-                disabled={!isDirty || isSaving}
-                onClick={resetChanges}
-              >
-                <RestartAltIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
+          <ResetChanges
+            disabled={!isDirty || isSaving}
+            onReset={resetChanges}
+          />
           <Button
             disabled={!isDirty || isSaving}
             onClick={() => void saveAccounts()}

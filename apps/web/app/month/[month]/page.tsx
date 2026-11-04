@@ -2,7 +2,7 @@ import { Container, Typography } from "@mui/material";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { BudgetEditor } from "../../components/BudgetEditor";
+import { BudgetEditor } from "./components/BudgetEditor";
 import {
   getMonthBudget,
   isCurrentMonth,
@@ -34,7 +34,7 @@ const MonthBudget = async ({
 
   return (
     <div className={styles.page}>
-      <Container sx={{ backgroundColor: "#23272f" }}>
+      <Container sx={{ backgroundColor: "#23272f" }} maxWidth="xl">
         <main className={styles.main}>
           <Typography variant="h2" sx={{ mb: 2 }}>
             {budget.name}
