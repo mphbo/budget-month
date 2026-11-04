@@ -2,6 +2,7 @@
 
 import EditCalendarIcon from "@mui/icons-material/EditCalendar";
 import MenuIcon from "@mui/icons-material/Menu";
+import TodayIcon from "@mui/icons-material/Today";
 import {
   Box,
   Button,
@@ -13,15 +14,24 @@ import {
   ListItemText,
   useMediaQuery,
 } from "@mui/material";
+import Tooltip from "@mui/material/Tooltip";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { signOut } from "../actions/auth";
 import type { MonthOption } from "../lib/month-types";
 import styles from "./AppDrawer.module.css";
 
-export const AppDrawer = ({ months }: { months: MonthOption[] }) => {
+export const AppDrawer = ({
+  months,
+  currentMonthSlug,
+}: {
+  months: MonthOption[];
+  currentMonthSlug: string;
+}) => {
   const [open, setOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width:600px)");
+  const pathname = usePathname();
 
   return (
     <>
@@ -39,21 +49,18 @@ export const AppDrawer = ({ months }: { months: MonthOption[] }) => {
         onClose={() => setOpen(false)}
         open={open}
       >
-        <Box sx={{ width: 280 }} role="presentation">
-          <List>
+        <Box role="presentation">
+          <List disablePadding>
             <ListItemButton
               component={Link}
               href="/"
               onClick={() => setOpen(false)}
+              sx={{ pt: 2, pb: 2, pl: 4 }}
             >
-              <ListItemText primary="Home" />
-            </ListItemButton>
-            <ListItemButton
-              component={Link}
-              href="/settings/password"
-              onClick={() => setOpen(false)}
-            >
-              <ListItemText primary="Change password" />
+              <ListItemText
+                primary="Budget Month"
+                slotProps={{ primary: { sx: { fontSize: "25px" } } }}
+              />
             </ListItemButton>
             <Divider />
             {months.length === 0 ? (
@@ -62,23 +69,85 @@ export const AppDrawer = ({ months }: { months: MonthOption[] }) => {
               </ListItem>
             ) : (
               months.map((month) => (
-                <ListItemButton
-                  component={Link}
-                  href={`/month/${month.slug}`}
-                  key={month.slug}
-                  onClick={() => setOpen(false)}
-                >
-                  <EditCalendarIcon />
-                  <ListItemText primary={month.name} />
-                </ListItemButton>
+                <Box key={month.slug}>
+                  <ListItem
+                    sx={{
+                      bgcolor:
+                        pathname === `/month/${month.slug}`
+                          ? "action.selected"
+                          : "transparent",
+                      color:
+                        pathname === `/month/${month.slug}`
+                          ? "primary.main"
+                          : "inherit",
+                      "&:hover": {
+                        bgcolor:
+                          pathname === `/month/${month.slug}`
+                            ? "action.selected"
+                            : "action.hover",
+                      },
+                    }}
+                  >
+                    <ListItemButton
+                      aria-current={
+                        pathname === `/month/${month.slug}` ? "page" : undefined
+                      }
+                      component={Link}
+                      href={`/month/${month.slug}`}
+                      onClick={() => setOpen(false)}
+                      selected={pathname === `/month/${month.slug}`}
+                      sx={{
+                        flex: 1,
+                        minWidth: 0,
+                        color: "inherit",
+                        "&:hover": { bgcolor: "transparent" },
+                        "&.Mui-selected": { bgcolor: "transparent" },
+                        "&.Mui-selected:hover": { bgcolor: "transparent" },
+                      }}
+                    >
+                      <EditCalendarIcon />
+                      <ListItemText primary={month.name} />
+                    </ListItemButton>
+                    <Box
+                      sx={{
+                        width: 48,
+                        flexShrink: 0,
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      {month.slug === currentMonthSlug && (
+                        <Tooltip title="Current calendar month">
+                          <TodayIcon
+                            aria-label="Current calendar month"
+                            fontSize="small"
+                            sx={{ color: "text.secondary" }}
+                          />
+                        </Tooltip>
+                      )}
+                    </Box>
+                  </ListItem>
+                  <Divider />
+                </Box>
               ))
             )}
-            <Divider />
-            <Box component="form" action={signOut} sx={{ p: 2 }}>
+            <Box component="form" action={signOut} sx={{ p: 2, mt: 2 }}>
               <Button fullWidth type="submit" variant="outlined">
                 Sign out
               </Button>
             </Box>
+            <Button
+              fullWidth
+              type="submit"
+              variant="text"
+              onClick={() => setOpen(false)}
+              component={Link}
+              href="/settings/password"
+              sx={{ mt: 0 }}
+            >
+              Change Password
+            </Button>
           </List>
         </Box>
       </Drawer>

@@ -16,6 +16,6 @@ export const AuthNavigation = async () => {
     return null;
   }
 
-  const { months } = await getMonthNavigationData();
-  return <AppDrawer months={months} />;
+  const { months, currentMonthSlug } = await getMonthNavigationData();
+  return <AppDrawer months={months} currentMonthSlug={currentMonthSlug} />;
 };

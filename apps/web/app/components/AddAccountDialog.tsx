@@ -29,11 +29,13 @@ export const AddAccountDialog = ({
   existingNames,
   onClose,
   onCreated,
+  onStage,
 }: {
   open: boolean;
   existingNames: string[];
   onClose: () => void;
-  onCreated: (account: Account) => void;
+  onCreated?: (account: Account) => void;
+  onStage?: (account: AccountInput) => void;
 }) => {
   const [name, setName] = useState("");
   const [type, setType] = useState<AccountType>("asset");
@@ -91,6 +93,16 @@ export const AddAccountDialog = ({
       return;
     }
 
+    if (onStage) {
+      onStage(account);
+      setName("");
+      setType("asset");
+      setCategory(getDefaultAccountCategory("asset"));
+      setAmount("");
+      onClose();
+      return;
+    }
+
     setIsCreating(true);
     try {
       const response = await fetch("/api/accounts", {
@@ -109,7 +121,7 @@ export const AddAccountDialog = ({
         response,
         "Could not read the response after adding this account",
       );
-      onCreated(result.account);
+      onCreated?.(result.account);
       setName("");
       setType("asset");
       setCategory(getDefaultAccountCategory("asset"));

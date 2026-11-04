@@ -23,7 +23,7 @@ const HomeContent = async () => {
   await connection();
 
   const [
-    { months, nextMonth, previousMonth, deletableMonths },
+    { months, currentMonthSlug, nextMonth, previousMonth, deletableMonths },
     accounts,
     equityHistory,
   ] = await Promise.all([
@@ -56,6 +56,7 @@ const HomeContent = async () => {
             <AccountList accounts={accounts} />
             <MonthList
               initialMonths={months}
+              currentMonthSlug={currentMonthSlug}
               initialNextMonth={nextMonth}
               initialPreviousMonth={previousMonth}
               initialDeletableMonths={deletableMonths}

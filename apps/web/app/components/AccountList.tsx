@@ -5,6 +5,7 @@ import AddIcon from "@mui/icons-material/Add";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import EditIcon from "@mui/icons-material/Edit";
 import PaymentsIcon from "@mui/icons-material/Payments";
+import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -17,8 +18,9 @@ import ListItemText from "@mui/material/ListItemText";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   Account,
   AccountInput,
@@ -77,6 +79,8 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
   const [savedAccounts, setSavedAccounts] = useState(
     accounts.map((account) => toAccountUpdateInput(toEditableAccount(account))),
   );
+  const savedAccountsRef = useRef(savedAccounts);
+  savedAccountsRef.current = savedAccounts;
   const [editingIds, setEditingIds] = useState<Set<string>>(() => new Set());
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -93,6 +97,23 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
       draft.filter((account) => account.type === type).map(toAccountInput),
     ) !==
     accountSnapshot(savedAccounts.filter((account) => account.type === type));
+  const resetChanges = () => {
+    setDraft(savedAccounts.map((account) => ({ ...account })));
+    setEditingIds(new Set());
+    setError(null);
+    setSavedMessage(null);
+  };
+
+  useLayoutEffect(
+    () => () => {
+      setDraft(savedAccountsRef.current.map((account) => ({ ...account })));
+      setEditingIds(new Set());
+      setIsAdding(false);
+      setError(null);
+      setSavedMessage(null);
+    },
+    [],
+  );
 
   const total =
     assets.reduce((sum, account) => sum + (Number(account.amount) || 0), 0) -
@@ -151,10 +172,11 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
   const addAccount = (account: Account) => {
     const editableAccount = toEditableAccount(account);
     setDraft((current) => [...current, editableAccount]);
-    setSavedAccounts((current) => [
-      ...current,
+    savedAccountsRef.current = [
+      ...savedAccountsRef.current,
       toAccountUpdateInput(editableAccount),
-    ]);
+    ];
+    setSavedAccounts(savedAccountsRef.current);
     setSavedMessage("Account added.");
     setError(null);
   };
@@ -203,6 +225,7 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
         );
       }
 
+      savedAccountsRef.current = input;
       setSavedAccounts(input);
       setSavedMessage("Account changes saved.");
     } catch (saveError) {
@@ -371,7 +394,6 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
           sx={{
             alignItems: "center",
             display: "flex",
-            gap: 1,
             justifyContent: "space-between",
           }}
         >
@@ -393,7 +415,6 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
           sx={{
             alignItems: "center",
             display: "flex",
-            gap: 1,
             justifyContent: "space-between",
           }}
         >
@@ -436,15 +457,29 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
           months remain historical snapshots.
         </Alert>
         {savedMessage && <Alert severity="success">{savedMessage}</Alert>}
-        <Stack direction="row" spacing={1}>
-          <Button
-            disabled={isSaving}
-            onClick={() => setIsAdding(true)}
-            startIcon={<AddIcon />}
-            variant="outlined"
-          >
-            Add account
-          </Button>
+        <Box sx={{ alignItems: "center", display: "flex", gap: 0.5 }}>
+          <Tooltip title="Add account">
+            <span>
+              <IconButton
+                aria-label="Add account"
+                disabled={isSaving}
+                onClick={() => setIsAdding(true)}
+              >
+                <AddIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Reset unsaved changes">
+            <span>
+              <IconButton
+                aria-label="Reset unsaved changes"
+                disabled={!isDirty || isSaving}
+                onClick={resetChanges}
+              >
+                <RestartAltIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
           <Button
             disabled={!isDirty || isSaving}
             onClick={() => void saveAccounts()}
@@ -452,7 +487,7 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
           >
             {isSaving ? "Saving..." : "Save changes"}
           </Button>
-        </Stack>
+        </Box>
       </Stack>
       <AddAccountDialog
         existingNames={draft.map((account) => account.name)}

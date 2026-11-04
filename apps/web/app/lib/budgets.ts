@@ -78,6 +78,8 @@ const dateFromSlug = (slug: string) => {
 
 const currentMonthStart = () => `${new Date().toISOString().slice(0, 7)}-01`;
 
+export const getCurrentMonthSlug = () => monthOption(currentMonthStart()).slug;
+
 export const isCurrentMonth = (slug: string) =>
   dateFromSlug(slug) === currentMonthStart();
 
@@ -165,6 +167,7 @@ export const getMonthNavigationData = cache(async () => {
   const months = await getMonthOptions();
   return {
     months,
+    currentMonthSlug: getCurrentMonthSlug(),
     nextMonth: await getNextMonthOption(months),
     previousMonth: getPreviousMonthOption(months),
     deletableMonths: getDeletableMonthSlugs(months),

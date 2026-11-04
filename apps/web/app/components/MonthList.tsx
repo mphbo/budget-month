@@ -3,6 +3,7 @@
 import AddIcon from "@mui/icons-material/Add";
 import DeleteForeverOutlinedIcon from "@mui/icons-material/DeleteForeverOutlined";
 import EditCalendarIcon from "@mui/icons-material/EditCalendar";
+import TodayIcon from "@mui/icons-material/Today";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -17,6 +18,7 @@ import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
+import Tooltip from "@mui/material/Tooltip";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getApiErrorMessage } from "../lib/api-response";
@@ -37,11 +39,13 @@ type MonthNavigationResponse = {
 
 export const MonthList = ({
   initialMonths,
+  currentMonthSlug,
   initialNextMonth,
   initialPreviousMonth,
   initialDeletableMonths,
 }: {
   initialMonths: MonthOption[];
+  currentMonthSlug: string;
   initialNextMonth: NextMonthOption;
   initialPreviousMonth: PreviousMonthOption | null;
   initialDeletableMonths: string[];
@@ -116,48 +120,105 @@ export const MonthList = ({
         </Alert>
       )}
       <nav aria-label="Months">
-        <List>
-          <ListItem disablePadding>
-            <ListItemButton
-              disabled={!previousMonth}
-              onClick={() => setMonthDirection("previous")}
+        <List disablePadding>
+          <Box>
+            <ListItem
+              sx={{
+                "&:hover": { bgcolor: "action.hover" },
+              }}
             >
-              <ListItemIcon>
-                <AddIcon />
-              </ListItemIcon>
-              <ListItemText primary="Add previous month" />
-            </ListItemButton>
-          </ListItem>
+              <ListItemButton
+                disabled={!previousMonth}
+                onClick={() => setMonthDirection("previous")}
+                sx={{
+                  "&:hover": { bgcolor: "transparent" },
+                }}
+              >
+                <ListItemIcon>
+                  <AddIcon />
+                </ListItemIcon>
+                <ListItemText primary="Add previous month" />
+              </ListItemButton>
+            </ListItem>
+          </Box>
           <Divider />
           {months.map((month, index) => (
             <Box key={month.slug}>
-              <ListItem disablePadding>
-                <ListItemButton onClick={() => handleMonthClick(month.slug)}>
+              <ListItem
+                sx={{
+                  "&:hover": { bgcolor: "action.hover" },
+                }}
+              >
+                <ListItemButton
+                  onClick={() => handleMonthClick(month.slug)}
+                  sx={{
+                    flex: 1,
+                    minWidth: 0,
+                    color: "inherit",
+                    "&:hover": { bgcolor: "transparent" },
+                  }}
+                >
                   <ListItemIcon>
                     <EditCalendarIcon />
                   </ListItemIcon>
                   <ListItemText primary={month.name} />
                 </ListItemButton>
-                {deletableMonths.includes(month.slug) && (
-                  <IconButton
-                    aria-label={`Delete ${month.name}`}
-                    color="error"
-                    disabled={isDeleting}
-                    onClick={() => setMonthToDelete(month)}
-                    sx={{ mr: 1 }}
-                  >
-                    <DeleteForeverOutlinedIcon />
-                  </IconButton>
-                )}
+                <Box
+                  sx={{
+                    width: 48,
+                    flexShrink: 0,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  {month.slug === currentMonthSlug && (
+                    <Tooltip title="Current calendar month">
+                      <TodayIcon
+                        aria-label="Current calendar month"
+                        fontSize="small"
+                        sx={{ color: "text.secondary" }}
+                      />
+                    </Tooltip>
+                  )}
+                </Box>
+                <Box
+                  sx={{
+                    width: 48,
+                    flexShrink: 0,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  {deletableMonths.includes(month.slug) && (
+                    <IconButton
+                      aria-label={`Delete ${month.name}`}
+                      color="error"
+                      disabled={isDeleting}
+                      onClick={() => setMonthToDelete(month)}
+                      sx={{ width: 48, height: 48 }}
+                    >
+                      <DeleteForeverOutlinedIcon />
+                    </IconButton>
+                  )}
+                </Box>
               </ListItem>
               {index < months.length - 1 && <Divider />}
             </Box>
           ))}
           {months.length > 0 && <Divider />}
-          <ListItem disablePadding>
+          <ListItem
+            sx={{
+              "&:hover": { bgcolor: "action.hover" },
+            }}
+          >
             <ListItemButton
               disabled={!nextMonth}
               onClick={() => setMonthDirection("next")}
+              sx={{
+                "&:hover": { bgcolor: "transparent" },
+              }}
             >
               <ListItemIcon>
                 <AddIcon />
