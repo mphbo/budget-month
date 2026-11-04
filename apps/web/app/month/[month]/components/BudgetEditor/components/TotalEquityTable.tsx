@@ -6,6 +6,7 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
+import ListItemText from "@mui/material/ListItemText";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -123,9 +124,13 @@ export const TotalEquityTable = ({
 
     return (
       <TableRow key={entry.id}>
-        <TableCell>{entry.item}</TableCell>
-        <TableCell>{accountType === "asset" ? "Asset" : "Liability"}</TableCell>
-        <TableCell>{entry.category ?? "—"}</TableCell>
+        <TableCell>
+          <ListItemText
+            primary={entry.item}
+            secondary={entry.category ?? "—"}
+            sx={{ my: 0 }}
+          />
+        </TableCell>
         <TableCell align="right">
           {formatCurrency(
             accountType === "liability" ? Math.abs(amount) : amount,
@@ -162,8 +167,6 @@ export const TotalEquityTable = ({
       <TableCell>
         <Typography sx={{ fontWeight: "bold" }}>{label}</Typography>
       </TableCell>
-      <TableCell />
-      <TableCell />
       <TableCell align="right">
         <Typography sx={{ fontWeight: "bold" }}>
           {formatCurrency(value)}
@@ -221,8 +224,6 @@ export const TotalEquityTable = ({
                 Item
               </TableSortLabel>
             </TableCell>
-            <TableCell>Type</TableCell>
-            <TableCell>Category</TableCell>
             <TableCell
               align="right"
               sortDirection={sortColumn === "amount" ? sortDirection : false}
@@ -240,14 +241,14 @@ export const TotalEquityTable = ({
         </TableHead>
         <TableBody>
           <TableRow>
-            <TableCell colSpan={5}>
+            <TableCell colSpan={3}>
               <Typography variant="h6">Assets</Typography>
             </TableCell>
           </TableRow>
           {assetItems.map(renderBudgetItem)}
           {renderGroupTotal("Total assets", getGroupTotal(assetItems))}
           <TableRow>
-            <TableCell colSpan={5}>
+            <TableCell colSpan={3}>
               <Typography variant="h6">Liabilities</Typography>
             </TableCell>
           </TableRow>
@@ -263,8 +264,6 @@ export const TotalEquityTable = ({
                 Excludes house, car &amp; mortgage
               </Typography>
             </TableCell>
-            <TableCell />
-            <TableCell />
             <TableCell align="right">
               <Typography sx={{ fontWeight: "bold" }}>
                 {formatCurrency(totalWithoutFixedAssets)}
@@ -279,8 +278,6 @@ export const TotalEquityTable = ({
                 Includes house, car &amp; mortgage
               </Typography>
             </TableCell>
-            <TableCell />
-            <TableCell />
             <TableCell align="right">
               <Typography sx={{ fontWeight: "bold" }}>
                 {formatCurrency(total)}

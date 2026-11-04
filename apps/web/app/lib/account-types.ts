@@ -3,14 +3,14 @@ export type AccountType = "asset" | "liability";
 export const ASSET_CATEGORIES = {
   cash: "Cash",
   investments: "Investments",
-  houseValue: "House Value",
-  carValue: "Car Value",
+  property: "Property",
+  vehicle: "Vehicle",
   other: "Other",
 } as const;
 
 export const LIABILITY_CATEGORIES = {
   creditCards: "Credit cards",
-  carLoan: "Car Loan",
+  vehicleLoan: "Vehicle Loan",
   loans: "Loans",
   mortgage: "Mortgage",
   other: "Other",
@@ -19,8 +19,8 @@ export const LIABILITY_CATEGORIES = {
 export type AssetCategory =
   (typeof ASSET_CATEGORIES)[keyof typeof ASSET_CATEGORIES];
 export const FIXED_ASSET_CATEGORIES = [
-  ASSET_CATEGORIES.houseValue,
-  ASSET_CATEGORIES.carValue,
+  ASSET_CATEGORIES.property,
+  ASSET_CATEGORIES.vehicle,
 ] as const;
 export type FixedAssetCategory = (typeof FIXED_ASSET_CATEGORIES)[number];
 

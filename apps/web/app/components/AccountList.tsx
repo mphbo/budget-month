@@ -5,7 +5,6 @@ import AddIcon from "@mui/icons-material/Add";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import EditIcon from "@mui/icons-material/Edit";
 import PaymentsIcon from "@mui/icons-material/Payments";
-import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -39,8 +38,8 @@ import { getApiErrorMessage } from "../lib/api-response";
 import { formatCurrency } from "../lib/formatting";
 import { AddAccountDialog } from "./AddAccountDialog";
 import { AmountField } from "./AmountField";
-import { UnsavedChangesIndicator } from "./UnsavedChangesIndicator";
 import { ResetChanges } from "./ResetChanges";
+import { UnsavedChangesIndicator } from "./UnsavedChangesIndicator";
 
 type EditableAccount = Omit<Account, "amount"> & { amount: string };
 
@@ -335,7 +334,7 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
               >
                 <ListItemText
                   primary={account.name}
-                  secondary={`${account.category} · ${account.type}`}
+                  secondary={account.category}
                 />
                 <Typography>
                   {formatCurrency(Number(account.amount))}
