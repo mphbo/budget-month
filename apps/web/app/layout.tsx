@@ -1,7 +1,6 @@
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { Science_Gothic } from "next/font/google";
+import { Geist, Geist_Mono, Inter, Science_Gothic } from "next/font/google";
 import { Suspense } from "react";
 import { AuthNavigation } from "./components/AuthNavigation";
 import Providers from "./providers";
@@ -22,6 +21,11 @@ const scienceGothic = Science_Gothic({
   subsets: ["latin"],
 });
 
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "Budget Month",
   description:
@@ -32,7 +36,7 @@ const RootLayout = ({ children }: LayoutProps<"/">) => {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${scienceGothic.variable}`}
+      className={`${geistSans.variable} ${geistMono.variable} ${scienceGothic.variable} ${inter.variable}`}
     >
       <body>
         <AppRouterCacheProvider>
