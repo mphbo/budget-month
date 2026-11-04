@@ -20,6 +20,7 @@ import type { AccountCategory, AccountType } from "../lib/account-types";
 import { formatCurrency } from "../lib/formatting";
 import { AmountField } from "./AmountField";
 import { TotalEquityItemDialog } from "./TotalEquityItemDialog";
+import { UnsavedChangesIndicator } from "./UnsavedChangesIndicator";
 
 export type EditableBudgetItem = {
   id: string;
@@ -46,6 +47,7 @@ export const DataTable = ({
   addDisabled = false,
   showDate = false,
   showAccountClassification = false,
+  hasUnsavedChanges = false,
 }: {
   title: string;
   items: EditableBudgetItem[];
@@ -58,6 +60,7 @@ export const DataTable = ({
   addDisabled?: boolean;
   showDate?: boolean;
   showAccountClassification?: boolean;
+  hasUnsavedChanges?: boolean;
 }) => {
   const [editingIds, setEditingIds] = useState<Set<string>>(() => new Set());
   const [equityDialogItem, setEquityDialogItem] =
@@ -166,25 +169,38 @@ export const DataTable = ({
 
   return (
     <>
-      {titleTooltip ? (
-        <Tooltip arrow placement="top" title={titleTooltip}>
-          <Box
-            component="span"
-            sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}
-          >
-            <Typography component="span" variant="h4">
-              {title}
-            </Typography>
-            <InfoOutlinedIcon
-              aria-label={`${title} information`}
-              fontSize="small"
-              sx={{ color: "text.secondary", cursor: "help" }}
-            />
-          </Box>
-        </Tooltip>
-      ) : (
-        <Typography variant="h4">{title}</Typography>
-      )}
+      <Box
+        sx={{
+          alignItems: "center",
+          display: "inline-flex",
+          gap: 0.75,
+          justifyContent: "space-between",
+          width: "100%",
+        }}
+      >
+        {titleTooltip ? (
+          <Tooltip arrow placement="top" title={titleTooltip}>
+            <Box
+              component="span"
+              sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}
+            >
+              <Typography component="span" variant="h4">
+                {title}
+              </Typography>
+              <InfoOutlinedIcon
+                aria-label={`${title} information`}
+                fontSize="small"
+                sx={{ color: "text.secondary", cursor: "help" }}
+              />
+            </Box>
+          </Tooltip>
+        ) : (
+          <Typography variant="h4">{title}</Typography>
+        )}
+        {hasUnsavedChanges && (
+          <UnsavedChangesIndicator label={`Unsaved changes in ${title}`} />
+        )}
+      </Box>
       <Table aria-label={`${title} budget table`}>
         <TableHead>
           <TableRow>

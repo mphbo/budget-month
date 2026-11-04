@@ -37,6 +37,7 @@ import { getApiErrorMessage } from "../lib/api-response";
 import { formatCurrency } from "../lib/formatting";
 import { AddAccountDialog } from "./AddAccountDialog";
 import { AmountField } from "./AmountField";
+import { UnsavedChangesIndicator } from "./UnsavedChangesIndicator";
 
 type EditableAccount = Omit<Account, "amount"> & { amount: string };
 
@@ -74,7 +75,7 @@ const accountSnapshot = (accounts: AccountInput[]) =>
 export const AccountList = ({ accounts }: { accounts: Account[] }) => {
   const [draft, setDraft] = useState(accounts.map(toEditableAccount));
   const [savedAccounts, setSavedAccounts] = useState(
-    accounts.map((account) => toAccountInput(toEditableAccount(account))),
+    accounts.map((account) => toAccountUpdateInput(toEditableAccount(account))),
   );
   const [editingIds, setEditingIds] = useState<Set<string>>(() => new Set());
   const [isAdding, setIsAdding] = useState(false);
@@ -87,6 +88,11 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
   const isDirty =
     accountSnapshot(draft.map(toAccountInput)) !==
     accountSnapshot(savedAccounts);
+  const isSectionDirty = (type: AccountType) =>
+    accountSnapshot(
+      draft.filter((account) => account.type === type).map(toAccountInput),
+    ) !==
+    accountSnapshot(savedAccounts.filter((account) => account.type === type));
 
   const total =
     assets.reduce((sum, account) => sum + (Number(account.amount) || 0), 0) -
@@ -147,7 +153,7 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
     setDraft((current) => [...current, editableAccount]);
     setSavedAccounts((current) => [
       ...current,
-      toAccountInput(editableAccount),
+      toAccountUpdateInput(editableAccount),
     ]);
     setSavedMessage("Account added.");
     setError(null);
@@ -184,7 +190,7 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
     setSavedMessage(null);
 
     try {
-      const input = draft.map(toAccountInput);
+      const input = draft.map(toAccountUpdateInput);
       const response = await fetch("/api/accounts", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -361,7 +367,19 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
     >
       <Stack spacing={3}>
         {error && <Alert severity="error">{error}</Alert>}
-        <Typography variant="h4">Assets</Typography>
+        <Box
+          sx={{
+            alignItems: "center",
+            display: "flex",
+            gap: 1,
+            justifyContent: "space-between",
+          }}
+        >
+          <Typography variant="h4">Assets</Typography>
+          {isSectionDirty("asset") && (
+            <UnsavedChangesIndicator label="Unsaved changes in Assets" />
+          )}
+        </Box>
         <List>
           {assets.map((account, index) => renderAccount(account, index))}
           {assets.length === 0 && (
@@ -371,7 +389,19 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
           )}
         </List>
         <Divider />
-        <Typography variant="h4">Liabilities</Typography>
+        <Box
+          sx={{
+            alignItems: "center",
+            display: "flex",
+            gap: 1,
+            justifyContent: "space-between",
+          }}
+        >
+          <Typography variant="h4">Liabilities</Typography>
+          {isSectionDirty("liability") && (
+            <UnsavedChangesIndicator label="Unsaved changes in Liabilities" />
+          )}
+        </Box>
         <List>
           {liabilities.map((account, index) => renderAccount(account, index))}
           {liabilities.length === 0 && (

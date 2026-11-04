@@ -82,26 +82,31 @@ const toBudgetInput = (budget: EditableBudget): BudgetInput => {
   };
 };
 
-const getBudgetSnapshot = (budget: BudgetInput) =>
+const getBudgetSectionSnapshot = (items: BudgetInput[BudgetSection]) =>
   JSON.stringify(
-    Object.fromEntries(
-      (Object.keys(sectionTitles) as BudgetSection[]).map((section) => [
-        section,
-        budget[section].map(
-          ({ item, amount, accountId, accountType, category, date }) => ({
-            item: item.trim(),
-            amount: /^-?\d{1,12}(?:\.\d{1,2})?$/.test(amount)
-              ? Number(amount).toFixed(2)
-              : amount,
-            ...(accountId ? { accountId } : {}),
-            ...(accountType ? { accountType } : {}),
-            ...(category ? { category } : {}),
-            ...(date ? { date } : {}),
-          }),
-        ),
-      ]),
-    ),
+    items.map(({ item, amount, accountId, accountType, category, date }) => ({
+      item: item.trim(),
+      amount: /^-?\d{1,12}(?:\.\d{1,2})?$/.test(amount)
+        ? Number(amount).toFixed(2)
+        : amount,
+      ...(accountId ? { accountId } : {}),
+      ...(accountType ? { accountType } : {}),
+      ...(category ? { category } : {}),
+      ...(date ? { date } : {}),
+    })),
   );
+
+const getBudgetSectionSnapshots = (
+  budget: BudgetInput,
+): Record<BudgetSection, string> => ({
+  income: getBudgetSectionSnapshot(budget.income),
+  expenses: getBudgetSectionSnapshot(budget.expenses),
+  equityChange: getBudgetSectionSnapshot(budget.equityChange),
+  totalEquity: getBudgetSectionSnapshot(budget.totalEquity),
+});
+
+const getBudgetSnapshot = (budget: BudgetInput) =>
+  JSON.stringify(getBudgetSectionSnapshots(budget));
 
 const getValidationError = (budget: EditableBudget) => {
   if (hasDuplicateNames(budget.totalEquity.map((entry) => entry.item))) {
@@ -147,7 +152,14 @@ export const BudgetEditor = ({
   const [savedVersion, setSavedVersion] = useState(0);
   const [isAddingEquityItem, setIsAddingEquityItem] = useState(false);
 
-  const currentInput = getBudgetSnapshot(toBudgetInput(draft));
+  const currentSectionSnapshots = getBudgetSectionSnapshots(
+    toBudgetInput(draft),
+  );
+  const savedSectionSnapshots = JSON.parse(savedInput) as Record<
+    BudgetSection,
+    string
+  >;
+  const currentInput = JSON.stringify(currentSectionSnapshots);
   const isDirty = currentInput !== savedInput;
   const incomeTotal = draft.income.reduce((sum, entry) => {
     const amount = Number(entry.amount);
@@ -381,6 +393,10 @@ export const BudgetEditor = ({
                 isCurrentMonth &&
                 section === "totalEquity" &&
                 (isDirty || isAddingEquityItem)
+              }
+              hasUnsavedChanges={
+                currentSectionSnapshots[section] !==
+                savedSectionSnapshots[section]
               }
               readOnly={section === "equityChange"}
               title={sectionTitles[section]}
