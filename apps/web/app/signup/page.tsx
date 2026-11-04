@@ -14,6 +14,15 @@ const SignupPage = () => {
           requireStrongPassword
         />
         <Typography>
+          Already signed up but didn&apos;t receive the email?{" "}
+          <NextLink
+            href="/resend-confirmation"
+            style={{ textDecoration: "underline" }}
+          >
+            Resend confirmation
+          </NextLink>
+        </Typography>
+        <Typography>
           Already registered?{" "}
           <NextLink href="/login" style={{ textDecoration: "underline" }}>
             Sign in

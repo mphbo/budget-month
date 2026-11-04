@@ -6,7 +6,11 @@ import { createSupabaseServerClient } from "../lib/supabase/server";
 
 export type AuthFormState = {
   error?: string;
+  success?: string;
 };
+
+const getSiteOrigin = () =>
+  new URL(process.env.SITE_URL ?? "http://localhost:3000").origin;
 
 const getCredentials = (formData: FormData) => {
   const email = formData.get("email");
@@ -81,9 +85,7 @@ export const signUp = async (
   const { data, error } = await supabase.auth.signUp({
     ...credentials,
     options: {
-      emailRedirectTo: `${
-        new URL(process.env.SITE_URL ?? "http://localhost:3000").origin
-      }/auth/confirm`,
+      emailRedirectTo: `${getSiteOrigin()}/auth/confirm`,
     },
   });
 
@@ -98,6 +100,99 @@ export const signUp = async (
   }
 
   redirect("/login?message=check-email");
+};
+
+export const resendConfirmation = async (
+  _previousState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> => {
+  const email = formData.get("email");
+  if (
+    typeof email !== "string" ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+  ) {
+    return { error: "Enter a valid email address." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: email.trim().toLowerCase(),
+    options: { emailRedirectTo: `${getSiteOrigin()}/auth/confirm` },
+  });
+  if (error) {
+    return {
+      error: "Could not resend the confirmation email. Please try again.",
+    };
+  }
+
+  return {
+    success:
+      "If that address has an unconfirmed account, a new confirmation email is on its way.",
+  };
+};
+
+export const requestPasswordReset = async (
+  _previousState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> => {
+  const email = formData.get("email");
+  if (
+    typeof email !== "string" ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+  ) {
+    return { error: "Enter a valid email address." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(
+    email.trim().toLowerCase(),
+    {
+      redirectTo: `${getSiteOrigin()}/auth/confirm?next=/settings/password`,
+    },
+  );
+  if (error) {
+    return {
+      error: "Could not send a password reset email. Please try again.",
+    };
+  }
+
+  return {
+    success:
+      "If an account exists for that address, a password reset link is on its way.",
+  };
+};
+
+export const updatePassword = async (
+  _previousState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> => {
+  const password = formData.get("password");
+  const confirmPassword = formData.get("confirmPassword");
+  if (typeof password !== "string" || !hasStrongPassword(password)) {
+    return {
+      error:
+        "Password must be 8-128 characters and include an uppercase letter and a symbol.",
+    };
+  }
+  if (confirmPassword !== password) {
+    return { error: "The passwords do not match." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error: userError } = await supabase.auth.getUser();
+  if (userError || !data.user) {
+    return {
+      error: "Your password reset link may have expired. Request a new one.",
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    return { error: "Could not update your password. Please try again." };
+  }
+
+  return { success: "Your password has been updated." };
 };
 
 export const signOut = async () => {

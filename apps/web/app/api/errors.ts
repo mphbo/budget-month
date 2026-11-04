@@ -33,6 +33,19 @@ export const mutationErrorResponse = (operation: string, error: unknown) => {
   console.error(`${operation} failed`, error);
   const errorCode = getErrorCode(error);
   const errorMessage = getErrorMessage(error);
+  if (
+    errorCode === "23505" &&
+    (errorMessage?.includes("account_items_user_name_unique") ||
+      errorMessage?.includes("budget_items_month_total_equity_name_unique"))
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Account and Total Equity item names must be unique, ignoring capitalization.",
+      },
+      { status: 409 },
+    );
+  }
   if (errorCode === "PGRST202" || errorCode === "42883") {
     const migrationHint = operation.includes("previous month")
       ? " Apply 20261031000005_create_previous_budget_month.sql."

@@ -38,7 +38,26 @@ const LoginContent = async ({
             confirmation email and try again.
           </Alert>
         )}
+        {message === "password-updated" && (
+          <Alert severity="success">Your password has been updated.</Alert>
+        )}
         <AuthForm action={signIn} submitLabel="Sign in" nextPath={next} />
+        <Typography>
+          <NextLink
+            href="/forgot-password"
+            style={{ textDecoration: "underline" }}
+          >
+            Forgot your password?
+          </NextLink>
+        </Typography>
+        <Typography>
+          <NextLink
+            href="/resend-confirmation"
+            style={{ textDecoration: "underline" }}
+          >
+            Didn&apos;t receive a confirmation email?
+          </NextLink>
+        </Typography>
         <Typography>
           New here?{" "}
           <NextLink href="/signup" style={{ textDecoration: "underline" }}>

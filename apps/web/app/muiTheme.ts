@@ -5,7 +5,7 @@ export const theme = createTheme({
     mode: "dark",
   },
   typography: {
-    fontFamily: "Roboto, Arial, sans-serif",
+    fontFamily: "var(--font-science-gothic), Arial, sans-serif",
     allVariants: {
       color: "white",
     },

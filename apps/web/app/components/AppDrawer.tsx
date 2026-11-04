@@ -48,6 +48,13 @@ export const AppDrawer = ({ months }: { months: MonthOption[] }) => {
             >
               <ListItemText primary="Home" />
             </ListItemButton>
+            <ListItemButton
+              component={Link}
+              href="/settings/password"
+              onClick={() => setOpen(false)}
+            >
+              <ListItemText primary="Change password" />
+            </ListItemButton>
             <Divider />
             {months.length === 0 ? (
               <ListItem>

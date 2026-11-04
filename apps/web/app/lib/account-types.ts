@@ -62,6 +62,18 @@ export const parseAccountCategory = (value: unknown): AccountCategory => {
   return value;
 };
 
+export const hasDuplicateNames = (names: string[]) => {
+  const seen = new Set<string>();
+  for (const name of names) {
+    const normalized = name.trim().toLowerCase();
+    if (seen.has(normalized)) {
+      return true;
+    }
+    seen.add(normalized);
+  }
+  return false;
+};
+
 export const getAccountCategories = (
   type: AccountType,
   currentCategory?: AccountCategory,

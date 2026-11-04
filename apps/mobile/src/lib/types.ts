@@ -49,6 +49,16 @@ export const accountCategories: Record<AccountType, string[]> = {
   liability: ["Credit cards", "Car Loan", "Loans", "Mortgage", "Other"],
 };
 
+export const hasDuplicateNames = (names: string[]) => {
+  const seen = new Set<string>();
+  for (const name of names) {
+    const normalized = name.trim().toLowerCase();
+    if (seen.has(normalized)) return true;
+    seen.add(normalized);
+  }
+  return false;
+};
+
 export const currentMonthStart = () =>
   `${new Date().toISOString().slice(0, 7)}-01`;
 export const monthStartFromSlug = (slug: string) => {

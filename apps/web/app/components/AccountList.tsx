@@ -28,6 +28,7 @@ import type {
 import {
   getAccountCategories,
   getDefaultAccountCategory,
+  hasDuplicateNames,
   isFixedAssetCategory,
   LIABILITY_CATEGORIES,
   parseAccountCategory,
@@ -151,6 +152,12 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
   };
 
   const saveAccounts = async () => {
+    if (hasDuplicateNames(draft.map((account) => account.name))) {
+      setError("Account names must be unique, ignoring capitalization.");
+      setSavedMessage(null);
+      return;
+    }
+
     const invalidAccount = draft.find(
       (account) =>
         !account.name.trim() ||
@@ -423,6 +430,7 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
         </Stack>
       </Stack>
       <AddAccountDialog
+        existingNames={draft.map((account) => account.name)}
         onClose={() => setIsAdding(false)}
         onCreated={addAccount}
         open={isAdding}

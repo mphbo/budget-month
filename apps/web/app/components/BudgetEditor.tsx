@@ -9,7 +9,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { Account } from "../lib/account-types";
+import { type Account, hasDuplicateNames } from "../lib/account-types";
 import { getApiErrorMessage, readApiJson } from "../lib/api-response";
 import type {
   BudgetInput,
@@ -103,6 +103,10 @@ const getBudgetSnapshot = (budget: BudgetInput) =>
   );
 
 const getValidationError = (budget: EditableBudget) => {
+  if (hasDuplicateNames(budget.totalEquity.map((entry) => entry.item))) {
+    return "Total Equity item names must be unique in this month, ignoring capitalization.";
+  }
+
   for (const section of Object.keys(sectionTitles) as BudgetSection[]) {
     for (const entry of budget[section]) {
       if (!entry.item.trim() || entry.item.trim().length > 200) {
@@ -398,6 +402,7 @@ export const BudgetEditor = ({
       </Grid>
       {isCurrentMonth && (
         <AddAccountDialog
+          existingNames={draft.totalEquity.map((entry) => entry.item)}
           onClose={() => setIsAddingEquityItem(false)}
           onCreated={(account) => void handleEquityAccountCreated(account)}
           open={isAddingEquityItem}

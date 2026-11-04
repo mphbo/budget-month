@@ -380,6 +380,9 @@ export const DataTable = ({
         <TotalEquityItemDialog
           accountSynced={accountSynced}
           disabled={disabled}
+          existingNames={items
+            .filter((item) => item.id !== equityDialogItem?.id)
+            .map((item) => item.item)}
           item={equityDialogItem}
           onClose={() => {
             setEquityDialogItem(null);

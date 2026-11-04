@@ -36,6 +36,7 @@ import {
   type AccountType,
   accountCategories,
   type EquityHistoryPoint,
+  hasDuplicateNames,
   type MonthOption,
 } from "../lib/types";
 
@@ -226,6 +227,16 @@ export default function DashboardScreen() {
       setError("Enter an account name and category.");
       return;
     }
+    if (
+      accountDraft.some(
+        (account) =>
+          account.id !== accountForm.id &&
+          account.name.trim().toLowerCase() === name.toLowerCase(),
+      )
+    ) {
+      setError("An account with this name already exists.");
+      return;
+    }
     if (!/^\d{1,12}(?:\.\d{1,2})?$/.test(accountForm.amount)) {
       setError("Enter a non-negative amount with up to 2 decimal places.");
       return;
@@ -269,6 +280,10 @@ export default function DashboardScreen() {
   };
 
   const saveAccountChanges = async () => {
+    if (hasDuplicateNames(accountDraft.map((account) => account.name))) {
+      setError("Account names must be unique, ignoring capitalization.");
+      return;
+    }
     if (
       accountDraft.some(
         (account) =>
@@ -322,6 +337,12 @@ export default function DashboardScreen() {
         <Heading subtitle={`Signed in as ${session?.user.email ?? ""}`}>
           Budget Month
         </Heading>
+        <TextButton
+          disabled={busy}
+          onPress={() => router.push("/settings/password")}
+        >
+          Change password
+        </TextButton>
         <TextButton
           disabled={busy}
           onPress={() => {

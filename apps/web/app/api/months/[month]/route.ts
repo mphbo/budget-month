@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { isAccountCategory } from "../../../lib/account-types";
+import {
+  hasDuplicateNames,
+  isAccountCategory,
+} from "../../../lib/account-types";
 import {
   deleteMonth,
   getMonthBudget,
@@ -129,6 +132,15 @@ export const PATCH = async (
     return NextResponse.json(
       { error: "Budget entries are invalid. Check item names and amounts." },
       { status: 400 },
+    );
+  }
+  if (hasDuplicateNames(body.budget.totalEquity.map((entry) => entry.item))) {
+    return NextResponse.json(
+      {
+        error:
+          "Total Equity item names must be unique in this month, ignoring capitalization.",
+      },
+      { status: 409 },
     );
   }
 

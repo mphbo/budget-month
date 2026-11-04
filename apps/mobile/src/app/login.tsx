@@ -16,7 +16,9 @@ import { getSupabase } from "../lib/supabase";
 
 export default function LoginScreen() {
   const { error: configError } = useAuth();
-  const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
+  const [mode, setMode] = useState<
+    "signIn" | "signUp" | "forgotPassword" | "resendConfirmation"
+  >("signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +33,11 @@ export default function LoginScreen() {
       setError("Enter a valid email address.");
       return;
     }
-    if (password.length < 8 || password.length > 128) {
+    if (
+      mode !== "forgotPassword" &&
+      mode !== "resendConfirmation" &&
+      (password.length < 8 || password.length > 128)
+    ) {
       setError("Password must be between 8 and 128 characters.");
       return;
     }
@@ -46,7 +52,30 @@ export default function LoginScreen() {
     setBusy(true);
     try {
       const supabase = getSupabase();
-      if (mode === "signIn") {
+      if (mode === "forgotPassword") {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+          normalizedEmail,
+          {
+            redirectTo: Linking.createURL("auth/callback", {
+              queryParams: { next: "/settings/password" },
+            }),
+          },
+        );
+        if (resetError) throw resetError;
+        setMessage(
+          "If an account exists for that address, a password reset link is on its way.",
+        );
+      } else if (mode === "resendConfirmation") {
+        const { error: resendError } = await supabase.auth.resend({
+          type: "signup",
+          email: normalizedEmail,
+          options: { emailRedirectTo: Linking.createURL("auth/callback") },
+        });
+        if (resendError) throw resendError;
+        setMessage(
+          "If that address has an unconfirmed account, a new confirmation email is on its way.",
+        );
+      } else if (mode === "signIn") {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: normalizedEmail,
           password,
@@ -94,7 +123,13 @@ export default function LoginScreen() {
             <Text
               style={{ color: colors.text, fontSize: 20, fontWeight: "700" }}
             >
-              {mode === "signIn" ? "Welcome back" : "Create your account"}
+              {mode === "signIn"
+                ? "Welcome back"
+                : mode === "signUp"
+                  ? "Create your account"
+                  : mode === "forgotPassword"
+                    ? "Reset your password"
+                    : "Resend confirmation email"}
             </Text>
             {configError ? <Notice kind="error">{configError}</Notice> : null}
             {error ? <Notice kind="error">{error}</Notice> : null}
@@ -107,16 +142,18 @@ export default function LoginScreen() {
               onChangeText={setEmail}
               value={email}
             />
-            <Field
-              autoCapitalize="none"
-              autoComplete={
-                mode === "signIn" ? "current-password" : "new-password"
-              }
-              label="Password"
-              onChangeText={setPassword}
-              secureTextEntry
-              value={password}
-            />
+            {mode !== "forgotPassword" && mode !== "resendConfirmation" ? (
+              <Field
+                autoCapitalize="none"
+                autoComplete={
+                  mode === "signIn" ? "current-password" : "new-password"
+                }
+                label="Password"
+                onChangeText={setPassword}
+                secureTextEntry
+                value={password}
+              />
+            ) : null}
             {mode === "signUp" ? (
               <Text style={{ color: colors.muted, lineHeight: 20 }}>
                 Use at least 8 characters, including an uppercase letter and a
@@ -124,20 +161,59 @@ export default function LoginScreen() {
               </Text>
             ) : null}
             <Button busy={busy} onPress={() => void submit()}>
-              {mode === "signIn" ? "Sign in" : "Create account"}
-            </Button>
-            <TextButton
-              disabled={busy}
-              onPress={() => {
-                setError(null);
-                setMessage(null);
-                setMode(mode === "signIn" ? "signUp" : "signIn");
-              }}
-            >
               {mode === "signIn"
-                ? "New here? Create an account"
-                : "Already have an account? Sign in"}
-            </TextButton>
+                ? "Sign in"
+                : mode === "signUp"
+                  ? "Create account"
+                  : mode === "forgotPassword"
+                    ? "Send reset link"
+                    : "Resend confirmation"}
+            </Button>
+            {mode === "signIn" ? (
+              <>
+                <TextButton
+                  disabled={busy}
+                  onPress={() => {
+                    setError(null);
+                    setMessage(null);
+                    setMode("forgotPassword");
+                  }}
+                >
+                  Forgot your password?
+                </TextButton>
+                <TextButton
+                  disabled={busy}
+                  onPress={() => {
+                    setError(null);
+                    setMessage(null);
+                    setMode("resendConfirmation");
+                  }}
+                >
+                  Didn&apos;t receive a confirmation email?
+                </TextButton>
+                <TextButton
+                  disabled={busy}
+                  onPress={() => {
+                    setError(null);
+                    setMessage(null);
+                    setMode("signUp");
+                  }}
+                >
+                  New here? Create an account
+                </TextButton>
+              </>
+            ) : (
+              <TextButton
+                disabled={busy}
+                onPress={() => {
+                  setError(null);
+                  setMessage(null);
+                  setMode("signIn");
+                }}
+              >
+                Back to sign in
+              </TextButton>
+            )}
           </Card>
         </View>
       </KeyboardAvoidingView>

@@ -25,10 +25,12 @@ import { getApiErrorMessage, readApiJson } from "../lib/api-response";
 
 export const AddAccountDialog = ({
   open,
+  existingNames,
   onClose,
   onCreated,
 }: {
   open: boolean;
+  existingNames: string[];
   onClose: () => void;
   onCreated: (account: Account) => void;
 }) => {
@@ -74,6 +76,17 @@ export const AddAccountDialog = ({
       !/^\d{1,12}(?:\.\d{1,2})?$/.test(account.amount)
     ) {
       setError("Enter a name, category, and valid non-negative amount.");
+      return;
+    }
+
+    if (
+      existingNames.some(
+        (existingName) =>
+          existingName.trim().toLowerCase() ===
+          account.name.trim().toLowerCase(),
+      )
+    ) {
+      setError("An account with this name already exists.");
       return;
     }
 

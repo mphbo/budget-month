@@ -138,30 +138,27 @@ const getEquityChanges = (
       .filter((item) => item.accountId)
       .map((item) => [item.accountId as string, item]),
   );
-  const previousWithoutIdByName = new Map<string, BudgetItem[]>();
+  const previousByName = new Map<string, BudgetItem[]>();
   const currentNameCounts = new Map<string, number>();
   for (const item of current) {
-    const key = item.item.trim().toLocaleLowerCase();
+    const key = item.item.trim().toLowerCase();
     currentNameCounts.set(key, (currentNameCounts.get(key) ?? 0) + 1);
   }
   for (const item of previous) {
-    if (item.accountId) continue;
-    const key = item.item.trim().toLocaleLowerCase();
-    previousWithoutIdByName.set(key, [
-      ...(previousWithoutIdByName.get(key) ?? []),
-      item,
-    ]);
+    const key = item.item.trim().toLowerCase();
+    previousByName.set(key, [...(previousByName.get(key) ?? []), item]);
   }
   const matchedPrevious = new Set<BudgetItem>();
   const changes: BudgetItem[] = [];
   for (const item of current) {
-    let before = item.accountId ? previousById.get(item.accountId) : undefined;
-    if (!before) {
-      const key = item.item.trim().toLocaleLowerCase();
-      const matches = previousWithoutIdByName.get(key);
-      if (currentNameCounts.get(key) === 1 && matches?.length === 1) {
-        before = matches[0];
-      }
+    const key = item.item.trim().toLowerCase();
+    const matches = previousByName.get(key);
+    let before =
+      currentNameCounts.get(key) === 1 && matches?.length === 1
+        ? matches[0]
+        : undefined;
+    if (!before && item.accountId) {
+      before = previousById.get(item.accountId);
     }
     if (before) matchedPrevious.add(before);
     const change =

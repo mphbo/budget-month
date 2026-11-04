@@ -20,6 +20,10 @@ function Navigation() {
       <Stack.Protected guard={Boolean(session)}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="month/[month]" options={{ title: "Budget" }} />
+        <Stack.Screen
+          name="settings/password"
+          options={{ title: "Change password" }}
+        />
       </Stack.Protected>
       <Stack.Screen name="auth/callback" options={{ title: "Confirm email" }} />
     </Stack>

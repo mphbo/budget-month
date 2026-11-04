@@ -21,6 +21,7 @@ import type { EditableBudgetItem } from "./DataTable";
 export const TotalEquityItemDialog = ({
   open,
   item,
+  existingNames,
   accountSynced,
   disabled,
   onClose,
@@ -28,6 +29,7 @@ export const TotalEquityItemDialog = ({
 }: {
   open: boolean;
   item: EditableBudgetItem | null;
+  existingNames: string[];
   accountSynced: boolean;
   disabled: boolean;
   onClose: () => void;
@@ -84,6 +86,15 @@ export const TotalEquityItemDialog = ({
       !/^-?\d{1,12}(?:\.\d{1,2})?$/.test(amount)
     ) {
       setError("Enter a name, category, and valid amount.");
+      return;
+    }
+    if (
+      existingNames.some(
+        (existingName) =>
+          existingName.trim().toLowerCase() === normalizedName.toLowerCase(),
+      )
+    ) {
+      setError("Total Equity item names must be unique in this month.");
       return;
     }
 

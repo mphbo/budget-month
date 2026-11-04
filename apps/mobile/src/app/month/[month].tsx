@@ -24,6 +24,7 @@ import {
   type BudgetSection,
   currentMonthStart,
   type EditableBudgetItem,
+  hasDuplicateNames,
   type MonthBudget,
   monthStartFromSlug,
   sections,
@@ -203,6 +204,12 @@ export default function MonthScreen() {
 
   const save = async () => {
     if (!draft || !slug) return;
+    if (hasDuplicateNames(draft.totalEquity.map((item) => item.item))) {
+      setError(
+        "Total Equity item names must be unique in this month, ignoring capitalization.",
+      );
+      return;
+    }
     for (const { key, title } of sections) {
       if (draft[key].length > 100) {
         setError(`${title} can contain up to 100 rows.`);

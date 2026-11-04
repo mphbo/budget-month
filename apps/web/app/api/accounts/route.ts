@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   type AccountInput,
   type AccountUpdateInput,
+  hasDuplicateNames,
   isAccountCategory,
 } from "../../lib/account-types";
 import { createAccount, getAccounts, saveAccounts } from "../../lib/budgets";
@@ -71,7 +72,6 @@ export const POST = async (request: Request) => {
       { status: 400 },
     );
   }
-
   try {
     const account = await createAccount(body.account);
     return NextResponse.json({ account }, { status: 201 });
@@ -94,6 +94,16 @@ export const PATCH = async (request: Request) => {
     return NextResponse.json(
       { error: "Account changes are invalid. Check each account's details." },
       { status: 400 },
+    );
+  }
+  if (
+    hasDuplicateNames(
+      body.accounts.map((account) => (account as AccountInput).name),
+    )
+  ) {
+    return NextResponse.json(
+      { error: "Account names must be unique, ignoring capitalization." },
+      { status: 409 },
     );
   }
 
