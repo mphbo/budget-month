@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { type Account, hasDuplicateNames } from "../lib/account-types";
 import { getApiErrorMessage, readApiJson } from "../lib/api-response";
+import { formatCurrency } from "../lib/formatting";
 import type {
   BudgetInput,
   BudgetSection,
@@ -169,8 +170,6 @@ export const BudgetEditor = ({
       : monthlyDifference < 0
         ? "error.main"
         : "text.primary";
-  const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
-
   const updateSection = (
     section: BudgetSection,
     items: EditableBudgetItem[],

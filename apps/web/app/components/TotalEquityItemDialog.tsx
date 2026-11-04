@@ -16,6 +16,7 @@ import {
   getDefaultAccountCategory,
   parseAccountCategory,
 } from "../lib/account-types";
+import { AmountField } from "./AmountField";
 import type { EditableBudgetItem } from "./DataTable";
 
 export const TotalEquityItemDialog = ({
@@ -163,7 +164,8 @@ export const TotalEquityItemDialog = ({
                 </MenuItem>
               ))}
             </TextField>
-            <TextField
+            <AmountField
+              allowNegative={type === "liability"}
               disabled={disabled}
               fullWidth
               helperText={
@@ -172,17 +174,8 @@ export const TotalEquityItemDialog = ({
                   : undefined
               }
               label="Amount"
-              onChange={(event) => setAmount(event.target.value)}
+              onAmountChange={setAmount}
               required
-              slotProps={{
-                htmlInput: {
-                  inputMode: "decimal",
-                  max: 999999999999.99,
-                  min: type === "asset" ? 0 : -999999999999.99,
-                  step: "0.01",
-                },
-              }}
-              type="number"
               value={amount}
             />
           </Stack>

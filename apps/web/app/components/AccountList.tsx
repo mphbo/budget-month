@@ -34,7 +34,9 @@ import {
   parseAccountCategory,
 } from "../lib/account-types";
 import { getApiErrorMessage } from "../lib/api-response";
+import { formatCurrency } from "../lib/formatting";
 import { AddAccountDialog } from "./AddAccountDialog";
+import { AmountField } from "./AmountField";
 
 type EditableAccount = Omit<Account, "amount"> & { amount: string };
 
@@ -281,24 +283,15 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
                     ),
                   )}
                 </TextField>
-                <TextField
+                <AmountField
                   aria-label={`Account amount ${index + 1}`}
                   disabled={isSaving}
                   fullWidth
                   label="Amount"
-                  onChange={(event) =>
-                    updateAccount(account.id, { amount: event.target.value })
+                  onAmountChange={(amount) =>
+                    updateAccount(account.id, { amount })
                   }
                   size="small"
-                  slotProps={{
-                    htmlInput: {
-                      inputMode: "decimal",
-                      max: 999999999999.99,
-                      min: 0,
-                      step: "0.01",
-                    },
-                  }}
-                  type="number"
                   value={account.amount}
                 />
               </>
@@ -314,7 +307,9 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
                   primary={account.name}
                   secondary={`${account.category} · ${account.type}`}
                 />
-                <Typography>${Number(account.amount).toFixed(2)}</Typography>
+                <Typography>
+                  {formatCurrency(Number(account.amount))}
+                </Typography>
               </Box>
             )}
           </Stack>
@@ -394,7 +389,7 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
             primary="Net total"
             secondary="Excludes house, car & mortgage"
           />
-          <Typography>${totalWithoutFixedAssets.toFixed(2)}</Typography>
+          <Typography>{formatCurrency(totalWithoutFixedAssets)}</Typography>
         </ListItem>
         <ListItem disablePadding sx={{ marginBottom: "20px" }}>
           <ListItemIcon sx={{ minWidth: 36 }}>
@@ -404,7 +399,7 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
             primary="Net total"
             secondary="Includes house, car & mortgage"
           />
-          <Typography>${total.toFixed(2)}</Typography>
+          <Typography>{formatCurrency(total)}</Typography>
         </ListItem>
         <Alert severity="info">
           Saved account balances sync with this month&apos;s Total Equity. Past

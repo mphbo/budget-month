@@ -17,6 +17,8 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
 import type { AccountCategory, AccountType } from "../lib/account-types";
+import { formatCurrency } from "../lib/formatting";
+import { AmountField } from "./AmountField";
 import { TotalEquityItemDialog } from "./TotalEquityItemDialog";
 
 export type EditableBudgetItem = {
@@ -258,22 +260,18 @@ export const DataTable = ({
               )}
               <TableCell align="right">
                 {editingIds.has(entry.id) && !showAccountClassification ? (
-                  <TextField
+                  <AmountField
+                    allowNegative
                     aria-label={`${title} amount ${index + 1}`}
                     disabled={disabled}
                     fullWidth
-                    slotProps={{
-                      htmlInput: { inputMode: "decimal", maxLength: 16 },
-                    }}
                     onBlur={(event) => handleRowBlur(event, entry)}
-                    onChange={(event) =>
-                      updateItem(index, { amount: event.target.value })
-                    }
+                    onAmountChange={(amount) => updateItem(index, { amount })}
                     size="small"
                     value={entry.amount}
                   />
                 ) : (
-                  `$${(Number(entry.amount) || 0).toFixed(2)}`
+                  formatCurrency(Number(entry.amount) || 0)
                 )}
               </TableCell>
               {showDate && (
@@ -348,7 +346,7 @@ export const DataTable = ({
             )}
             <TableCell align="right">
               <Typography sx={{ fontWeight: "bold" }}>
-                ${total.toFixed(2)}
+                {formatCurrency(total)}
               </Typography>
             </TableCell>
             {showDate && <TableCell />}

@@ -22,6 +22,7 @@ import {
   parseAccountCategory,
 } from "../lib/account-types";
 import { getApiErrorMessage, readApiJson } from "../lib/api-response";
+import { AmountField } from "./AmountField";
 
 export const AddAccountDialog = ({
   open,
@@ -176,20 +177,11 @@ export const AddAccountDialog = ({
                 </MenuItem>
               ))}
             </TextField>
-            <TextField
+            <AmountField
               fullWidth
               label="Amount"
-              onChange={(event) => setAmount(event.target.value)}
+              onAmountChange={setAmount}
               required
-              slotProps={{
-                htmlInput: {
-                  inputMode: "decimal",
-                  max: 999999999999.99,
-                  min: 0,
-                  step: "0.01",
-                },
-              }}
-              type="number"
               value={amount}
             />
           </Stack>
