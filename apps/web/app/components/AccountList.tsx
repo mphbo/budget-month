@@ -458,7 +458,11 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
         </Alert>
         {savedMessage && <Alert severity="success">{savedMessage}</Alert>}
         <Box sx={{ alignItems: "center", display: "flex", gap: 0.5 }}>
-          <Tooltip title="Add account">
+          <Tooltip
+            enterTouchDelay={0}
+            leaveTouchDelay={3000}
+            title="Add account"
+          >
             <span>
               <IconButton
                 aria-label="Add account"

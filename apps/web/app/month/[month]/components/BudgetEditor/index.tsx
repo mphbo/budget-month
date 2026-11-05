@@ -22,8 +22,8 @@ import {
   createEditableBudget,
   getBudgetSectionSnapshots,
   getBudgetSnapshot,
+  getEquityChangesFromSavedBaseline,
   getValidationError,
-  signedEquityAmount,
   toBudgetInput,
 } from "./helpers";
 import type {
@@ -100,72 +100,17 @@ export const BudgetEditor = ({
     items: EditableBudgetItem[],
   ) => {
     setDraft((current) => {
-      if (section !== "totalEquity" || !isCurrentMonth) {
+      if (section !== "totalEquity") {
         return { ...current, [section]: items };
-      }
-
-      const equityChanges = new Map(
-        current.equityChange
-          .filter((entry) => entry.accountId)
-          .map((entry) => [entry.accountId as string, entry]),
-      );
-      const nextItemsByAccountId = new Map(
-        items
-          .filter((entry) => entry.accountId)
-          .map((entry) => [entry.accountId as string, entry]),
-      );
-
-      for (const previous of current.totalEquity) {
-        if (!previous.accountId) {
-          continue;
-        }
-
-        const change = equityChanges.get(previous.accountId);
-        const next = nextItemsByAccountId.get(previous.accountId);
-        const previousCurrentAmount = signedEquityAmount(
-          previous.accountType ??
-            (Number(previous.amount) < 0 ? "liability" : "asset"),
-          previous.amount,
-        );
-        const previousAmount =
-          previousCurrentAmount - Number(change?.amount ?? 0);
-        const adjustedPreviousAmount =
-          next?.accountType && next.accountType !== previous.accountType
-            ? signedEquityAmount(
-                next.accountType,
-                String(Math.abs(previousAmount)),
-              )
-            : previousAmount;
-        const nextAmount = next
-          ? signedEquityAmount(
-              next.accountType ??
-                (Number(next.amount) < 0 ? "liability" : "asset"),
-              next.amount,
-            )
-          : 0;
-        const nextChange = next
-          ? nextAmount - adjustedPreviousAmount
-          : -previousAmount;
-
-        if (nextChange === 0) {
-          equityChanges.delete(previous.accountId);
-        } else {
-          equityChanges.set(previous.accountId, {
-            accountId: previous.accountId,
-            item: next?.item ?? change?.item ?? previous.item,
-            amount: nextChange.toFixed(2),
-            id: change?.id ?? `equity-change-${previous.accountId}`,
-          });
-        }
       }
 
       return {
         ...current,
         totalEquity: items,
-        equityChange: [
-          ...Array.from(equityChanges.values()),
-          ...current.equityChange.filter((entry) => !entry.accountId),
-        ],
+        equityChange: getEquityChangesFromSavedBaseline(
+          savedDraftRef.current,
+          items,
+        ),
       };
     });
     setError(null);

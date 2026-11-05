@@ -5,7 +5,7 @@ import Box from "@mui/material/Box";
 import Tooltip from "@mui/material/Tooltip";
 
 export const UnsavedChangesIndicator = ({ label }: { label: string }) => (
-  <Tooltip title={label}>
+  <Tooltip enterTouchDelay={0} leaveTouchDelay={3000} title={label}>
     <Box
       aria-label={label}
       component="span"

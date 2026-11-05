@@ -47,6 +47,7 @@ export const EquityHistoryChart = ({
 }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(640);
+  const [activePointMonth, setActivePointMonth] = useState<string | null>(null);
   useEffect(() => {
     const container = chartContainerRef.current;
     if (!container) {
@@ -228,10 +229,12 @@ export const EquityHistoryChart = ({
             Select at least one category to show its equity history.
           </Typography>
         ) : (
-          <Box sx={{ overflowX: "auto", width: "100%" }}>
+          <Box
+            aria-label="Equity trend across budget months"
+            component="section"
+            sx={{ overflowX: "auto", width: "100%" }}
+          >
             <svg
-              aria-label="Equity trend across budget months"
-              role="img"
               viewBox={`0 0 ${chartWidth} ${chartHeight}`}
               style={{
                 display: "block",
@@ -239,9 +242,12 @@ export const EquityHistoryChart = ({
                 height: `${chartHeight}px`,
               }}
             >
+              <title>Equity trend across budget months</title>
               <style>
                 {`g.equity-point .equity-point-label { opacity: 0; transition: opacity 120ms ease; }
-            g.equity-point:hover .equity-point-label { opacity: 1; }`}
+            g.equity-point:hover .equity-point-label,
+            g.equity-point:focus-within .equity-point-label,
+            g.equity-point.is-active .equity-point-label { opacity: 1; }`}
               </style>
               {ticks.map((value) => {
                 const tickY = y(value);
@@ -283,10 +289,36 @@ export const EquityHistoryChart = ({
                 return (
                   <g
                     key={point.month}
-                    aria-label={`${point.month}: ${exactValue}`}
-                    className="equity-point"
+                    className={`equity-point${activePointMonth === point.month ? " is-active" : ""}`}
                   >
                     <circle cx={xPosition} cy={pointY} r="5" fill="#90caf9" />
+                    <foreignObject
+                      height="36"
+                      width="36"
+                      x={xPosition - 18}
+                      y={pointY - 18}
+                    >
+                      <button
+                        aria-label={`${point.month}: ${exactValue}`}
+                        aria-pressed={activePointMonth === point.month}
+                        onClick={() =>
+                          setActivePointMonth((activeMonth) =>
+                            activeMonth === point.month ? null : point.month,
+                          )
+                        }
+                        style={{
+                          background: "transparent",
+                          border: 0,
+                          borderRadius: "50%",
+                          cursor: "pointer",
+                          height: "100%",
+                          outlineOffset: "-2px",
+                          padding: 0,
+                          width: "100%",
+                        }}
+                        type="button"
+                      />
+                    </foreignObject>
                     <text
                       className="equity-point-label"
                       x={xPosition}

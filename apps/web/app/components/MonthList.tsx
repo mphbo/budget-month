@@ -66,6 +66,7 @@ export const MonthList = ({
   const [error, setError] = useState<string | null>(null);
   const [monthToDelete, setMonthToDelete] = useState<MonthOption | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [currentMonthTooltipOpen, setCurrentMonthTooltipOpen] = useState(false);
 
   const handleMonthClick = (month: string) => {
     router.push(`/month/${month}`);
@@ -173,12 +174,26 @@ export const MonthList = ({
                   }}
                 >
                   {month.slug === currentMonthSlug && (
-                    <Tooltip title="Current calendar month">
-                      <TodayIcon
+                    <Tooltip
+                      disableFocusListener
+                      disableHoverListener
+                      disableTouchListener
+                      open={currentMonthTooltipOpen}
+                      title="Current calendar month"
+                    >
+                      <IconButton
                         aria-label="Current calendar month"
-                        fontSize="small"
-                        sx={{ color: "text.secondary" }}
-                      />
+                        onBlur={() => setCurrentMonthTooltipOpen(false)}
+                        onClick={() =>
+                          setCurrentMonthTooltipOpen((isOpen) => !isOpen)
+                        }
+                        size="small"
+                      >
+                        <TodayIcon
+                          fontSize="small"
+                          sx={{ color: "text.secondary" }}
+                        />
+                      </IconButton>
                     </Tooltip>
                   )}
                 </Box>

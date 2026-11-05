@@ -9,7 +9,11 @@ export const ResetChanges = ({
   onReset: () => void;
   disabled: boolean;
 }) => (
-  <Tooltip title="Reset unsaved changes">
+  <Tooltip
+    enterTouchDelay={0}
+    leaveTouchDelay={3000}
+    title="Reset unsaved changes"
+  >
     <span>
       <IconButton
         aria-label="Reset unsaved changes"

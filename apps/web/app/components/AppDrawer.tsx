@@ -8,6 +8,7 @@ import {
   Button,
   Divider,
   Drawer,
+  IconButton,
   List,
   ListItem,
   ListItemButton,
@@ -30,6 +31,7 @@ export const AppDrawer = ({
   currentMonthSlug: string;
 }) => {
   const [open, setOpen] = useState(false);
+  const [currentMonthTooltipOpen, setCurrentMonthTooltipOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width:600px)");
   const pathname = usePathname();
 
@@ -118,12 +120,26 @@ export const AppDrawer = ({
                       }}
                     >
                       {month.slug === currentMonthSlug && (
-                        <Tooltip title="Current calendar month">
-                          <TodayIcon
+                        <Tooltip
+                          disableFocusListener
+                          disableHoverListener
+                          disableTouchListener
+                          open={currentMonthTooltipOpen}
+                          title="Current calendar month"
+                        >
+                          <IconButton
                             aria-label="Current calendar month"
-                            fontSize="small"
-                            sx={{ color: "text.secondary" }}
-                          />
+                            onBlur={() => setCurrentMonthTooltipOpen(false)}
+                            onClick={() =>
+                              setCurrentMonthTooltipOpen((isOpen) => !isOpen)
+                            }
+                            size="small"
+                          >
+                            <TodayIcon
+                              fontSize="small"
+                              sx={{ color: "text.secondary" }}
+                            />
+                          </IconButton>
                         </Tooltip>
                       )}
                     </Box>

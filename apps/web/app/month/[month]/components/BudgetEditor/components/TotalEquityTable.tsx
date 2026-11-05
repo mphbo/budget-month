@@ -190,7 +190,13 @@ export const TotalEquityTable = ({
         }}
       >
         {titleTooltip ? (
-          <Tooltip arrow placement="top" title={titleTooltip}>
+          <Tooltip
+            arrow
+            enterTouchDelay={0}
+            leaveTouchDelay={3000}
+            placement="top"
+            title={titleTooltip}
+          >
             <Box
               component="span"
               sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}
