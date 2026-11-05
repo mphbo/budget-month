@@ -237,7 +237,6 @@ export const DataTable = ({
               <TableCell align="right">
                 {editingIds.has(entry.id) ? (
                   <AmountField
-                    allowNegative
                     aria-label={`${title} amount ${index + 1}`}
                     disabled={disabled}
                     fullWidth

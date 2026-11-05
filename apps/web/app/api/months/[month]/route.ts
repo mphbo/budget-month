@@ -62,7 +62,9 @@ const isBudgetEntry = (
     entry.item.trim().length > 0 &&
     entry.item.trim().length <= 200 &&
     typeof entry.amount === "string" &&
-    /^-?\d{1,12}(?:\.\d{1,2})?$/.test(entry.amount) &&
+    (section === "equityChange"
+      ? /^-?\d{1,12}(?:\.\d{1,2})?$/.test(entry.amount)
+      : /^\d{1,12}(?:\.\d{1,2})?$/.test(entry.amount)) &&
     validAccountLink &&
     validAccountClassification
   );

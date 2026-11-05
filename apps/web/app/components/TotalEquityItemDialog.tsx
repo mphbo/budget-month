@@ -16,8 +16,8 @@ import {
   getDefaultAccountCategory,
   parseAccountCategory,
 } from "../lib/account-types";
-import { AmountField } from "./AmountField";
 import type { EditableBudgetItem } from "../month/[month]/components/BudgetEditor/components/DataTable";
+import { AmountField } from "./AmountField";
 
 export const TotalEquityItemDialog = ({
   open,
@@ -65,15 +65,6 @@ export const TotalEquityItemDialog = ({
 
     setType(nextType);
     setCategory(getDefaultAccountCategory(nextType));
-    const numericAmount = Number(amount);
-    if (amount && Number.isFinite(numericAmount)) {
-      setAmount(
-        (nextType === "liability"
-          ? -Math.abs(numericAmount)
-          : Math.abs(numericAmount)
-        ).toFixed(2),
-      );
-    }
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -84,7 +75,7 @@ export const TotalEquityItemDialog = ({
       normalizedName.length > 200 ||
       !category.trim() ||
       category.trim().length > 100 ||
-      !/^-?\d{1,12}(?:\.\d{1,2})?$/.test(amount)
+      !/^\d{1,12}(?:\.\d{1,2})?$/.test(amount)
     ) {
       setError("Enter a name, category, and valid amount.");
       return;
@@ -165,14 +156,8 @@ export const TotalEquityItemDialog = ({
               ))}
             </TextField>
             <AmountField
-              allowNegative={type === "liability"}
               disabled={disabled}
               fullWidth
-              helperText={
-                type === "liability"
-                  ? "Liabilities use a negative balance."
-                  : undefined
-              }
               label="Amount"
               onAmountChange={setAmount}
               required

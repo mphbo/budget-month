@@ -1,16 +1,14 @@
-import { AccountInput, hasDuplicateNames } from "@/app/lib/account-types";
-import { BudgetInput, MonthBudget, BudgetSection } from "@/app/lib/month-types";
-import { EditableBudget } from "./types";
+import { type AccountType, hasDuplicateNames } from "@/app/lib/account-types";
+import type {
+  BudgetInput,
+  BudgetSection,
+  MonthBudget,
+} from "@/app/lib/month-types";
 import { sectionTitles } from "./constants";
+import type { EditableBudget } from "./types";
 
-export const signedAmount = (
-  accountType: AccountInput["type"],
-  amount: string,
-) =>
-  (accountType === "liability"
-    ? -Math.abs(Number(amount))
-    : Number(amount)
-  ).toFixed(2);
+export const signedEquityAmount = (type: AccountType, amount: string) =>
+  type === "liability" ? -Math.abs(Number(amount)) : Math.abs(Number(amount));
 
 export const createEditableBudget = (budget: MonthBudget): EditableBudget => {
   return {
@@ -101,7 +99,11 @@ export const getValidationError = (budget: EditableBudget) => {
       if (!entry.item.trim() || entry.item.trim().length > 200) {
         return "Each row needs an item name of 1 to 200 characters.";
       }
-      if (!/^-?\d{1,12}(?:\.\d{1,2})?$/.test(entry.amount)) {
+      if (
+        section === "equityChange"
+          ? !/^-?\d{1,12}(?:\.\d{1,2})?$/.test(entry.amount)
+          : !/^\d{1,12}(?:\.\d{1,2})?$/.test(entry.amount)
+      ) {
         return "Amounts must have up to 12 digits and 2 decimal places.";
       }
     }

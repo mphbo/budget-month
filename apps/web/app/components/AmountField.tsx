@@ -7,24 +7,25 @@ type AmountFieldProps = Omit<
   TextFieldProps,
   "defaultValue" | "onChange" | "type" | "value"
 > & {
-  allowNegative?: boolean;
   onAmountChange: (value: string) => void;
   value: string;
 };
 
 export const AmountField = ({
-  allowNegative = false,
   onAmountChange,
   value,
   ...textFieldProps
 }: AmountFieldProps) => (
   <NumericFormat
-    allowNegative={allowNegative}
+    allowNegative={false}
     customInput={TextField}
     decimalScale={2}
     isAllowed={({ value: numericValue }) => {
-      const unsignedValue = numericValue.replace(/^-/, "");
-      const [integerPart, fractionalPart] = unsignedValue.split(".");
+      if (numericValue.startsWith("-")) {
+        return false;
+      }
+
+      const [integerPart, fractionalPart] = numericValue.split(".");
       return integerPart.length <= 12 && (fractionalPart?.length ?? 0) <= 2;
     }}
     inputMode="decimal"

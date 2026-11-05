@@ -56,7 +56,9 @@ export const TotalEquityTable = ({
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const total = items.reduce((sum, entry) => {
     const amount = Number(entry.amount);
-    return sum + (Number.isFinite(amount) ? amount : 0);
+    const type = entry.accountType ?? (amount < 0 ? "liability" : "asset");
+    const balance = Number.isFinite(amount) ? Math.abs(amount) : 0;
+    return sum + (type === "liability" ? -balance : balance);
   }, 0);
   const displayItems = items
     .map((entry, index) => ({ entry, index }))

@@ -12,18 +12,18 @@ import { ResetChanges } from "@/app/components/ResetChanges";
 import type { Account, AccountInput } from "@/app/lib/account-types";
 import { getApiErrorMessage, readApiJson } from "@/app/lib/api-response";
 import type { BudgetSection, MonthBudget } from "@/app/lib/month-types";
-import { DataTable, type EditableBudgetItem } from "./components/DataTable";
-import { TotalEquityTable } from "./components/TotalEquityTable";
 import { CashFlow } from "./components/CashFlow";
 import { CurrentMonthAlert } from "./components/CurrentMonthAlert";
+import { DataTable, type EditableBudgetItem } from "./components/DataTable";
 import { SaveProgressDialog } from "./components/SaveProgressDialog";
+import { TotalEquityTable } from "./components/TotalEquityTable";
 import { sectionTitles } from "./constants";
 import {
   createEditableBudget,
   getBudgetSectionSnapshots,
   getBudgetSnapshot,
   getValidationError,
-  signedAmount,
+  signedEquityAmount,
   toBudgetInput,
 } from "./helpers";
 import type {
@@ -122,16 +122,29 @@ export const BudgetEditor = ({
 
         const change = equityChanges.get(previous.accountId);
         const next = nextItemsByAccountId.get(previous.accountId);
+        const previousCurrentAmount = signedEquityAmount(
+          previous.accountType ??
+            (Number(previous.amount) < 0 ? "liability" : "asset"),
+          previous.amount,
+        );
         const previousAmount =
-          Number(previous.amount) - Number(change?.amount ?? 0);
+          previousCurrentAmount - Number(change?.amount ?? 0);
         const adjustedPreviousAmount =
           next?.accountType && next.accountType !== previous.accountType
-            ? next.accountType === "liability"
-              ? -Math.abs(previousAmount)
-              : Math.abs(previousAmount)
+            ? signedEquityAmount(
+                next.accountType,
+                String(Math.abs(previousAmount)),
+              )
             : previousAmount;
+        const nextAmount = next
+          ? signedEquityAmount(
+              next.accountType ??
+                (Number(next.amount) < 0 ? "liability" : "asset"),
+              next.amount,
+            )
+          : 0;
         const nextChange = next
-          ? Number(next.amount) - adjustedPreviousAmount
+          ? nextAmount - adjustedPreviousAmount
           : -previousAmount;
 
         if (nextChange === 0) {
@@ -164,7 +177,7 @@ export const BudgetEditor = ({
     const item: EditableBudgetItem = {
       id: itemId,
       item: account.name,
-      amount: signedAmount(account.type, account.amount),
+      amount: Number(account.amount).toFixed(2),
       accountType: account.type,
       category: account.category,
     };
@@ -284,10 +297,7 @@ export const BudgetEditor = ({
         const createdItem: EditableBudgetItem = {
           id: staged.itemId,
           item: result.account.name,
-          amount: signedAmount(
-            result.account.type,
-            String(result.account.amount),
-          ),
+          amount: Number(result.account.amount).toFixed(2),
           accountId: result.account.id,
           accountType: result.account.type,
           category: result.account.category,

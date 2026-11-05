@@ -234,11 +234,10 @@ export const getEquityHistory = async (): Promise<EquityHistoryPoint[]> => {
       item.account_type ??
       (Number(item.amount) < 0 ? "liability" : "asset");
     const category = account?.category ?? item.category ?? "Other";
-    const signedAmount = account
-      ? account.type === "liability"
+    const signedAmount =
+      type === "liability"
         ? -Math.abs(Number(item.amount))
-        : Math.abs(Number(item.amount))
-      : Number(item.amount);
+        : Math.abs(Number(item.amount));
     const key = `${type}:${category}`;
     const categoryValues = categoryValuesByMonth.get(item.month_id) ?? {};
     categoryValues[key] = (categoryValues[key] ?? 0) + signedAmount;
@@ -300,6 +299,11 @@ const getEquityChanges = (
   currentItems: MonthBudget["totalEquity"],
   previousItems: MonthBudget["totalEquity"],
 ): MonthBudget["equityChange"] => {
+  const signedAmount = (item: MonthBudget["totalEquity"][number]) => {
+    const amount = Math.abs(item.amount);
+    const type = item.accountType ?? (item.amount < 0 ? "liability" : "asset");
+    return type === "liability" ? -amount : amount;
+  };
   const previousById = new Map(
     previousItems
       .filter((item) => item.accountId)
@@ -336,8 +340,8 @@ const getEquityChanges = (
     }
 
     const changeCents =
-      Math.round(current.amount * 100) -
-      Math.round((previous?.amount ?? 0) * 100);
+      Math.round(signedAmount(current) * 100) -
+      Math.round((previous ? signedAmount(previous) : 0) * 100);
     if (changeCents !== 0) {
       changes.push({
         item: current.item,
@@ -349,7 +353,7 @@ const getEquityChanges = (
 
   for (const previous of previousItems) {
     if (!matchedPrevious.has(previous)) {
-      const changeCents = -Math.round(previous.amount * 100);
+      const changeCents = -Math.round(signedAmount(previous) * 100);
       if (changeCents !== 0) {
         changes.push({
           item: previous.item,
@@ -543,7 +547,7 @@ export const getMonthBudget = async (
   const { data: previousItems, error: previousItemsError } = previousMonth
     ? await supabase
         .from("budget_items")
-        .select("section, name, amount, account_id")
+        .select("section, name, amount, account_id, account_type, category")
         .eq("user_id", userId)
         .eq("month_id", previousMonth.id)
         .eq("section", "totalEquity")
@@ -586,10 +590,8 @@ export const getMonthBudget = async (
       budget[section].push({
         item: item.name,
         amount:
-          section === "totalEquity" && account
-            ? account.account_type === "liability"
-              ? -Math.abs(Number(item.amount))
-              : Math.abs(Number(item.amount))
+          section === "totalEquity"
+            ? Math.abs(Number(item.amount))
             : Number(item.amount),
         ...(item.account_id ? { accountId: item.account_id } : {}),
         ...(account
@@ -611,10 +613,7 @@ export const getMonthBudget = async (
   if (isCurrent) {
     budget.totalEquity = accounts.map((account) => ({
       item: account.name,
-      amount:
-        account.account_type === "liability"
-          ? -Number(account.amount)
-          : Number(account.amount),
+      amount: Number(account.amount),
       accountId: account.id,
       accountType: account.account_type,
       category: parseAccountCategory(account.category),
@@ -623,13 +622,13 @@ export const getMonthBudget = async (
 
   const previousEquity = previousItems.map((item) => ({
     item: item.name,
-    amount:
-      item.account_id && accountsById.has(item.account_id)
-        ? accountsById.get(item.account_id)?.account_type === "liability"
-          ? -Math.abs(Number(item.amount))
-          : Math.abs(Number(item.amount))
-        : Number(item.amount),
+    amount: Math.abs(Number(item.amount)),
     ...(item.account_id ? { accountId: item.account_id } : {}),
+    ...(item.account_type
+      ? { accountType: item.account_type }
+      : item.account_id && accountsById.has(item.account_id)
+        ? { accountType: accountsById.get(item.account_id)?.account_type }
+        : {}),
   }));
   budget.equityChange = previousMonth
     ? getEquityChanges(budget.totalEquity, previousEquity)
