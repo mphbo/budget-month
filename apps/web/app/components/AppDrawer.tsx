@@ -101,6 +101,7 @@ export const AppDrawer = ({
                       sx={{
                         flex: 1,
                         minWidth: 0,
+                        gap: 1.5,
                         color: "inherit",
                         "&:hover": { bgcolor: "transparent" },
                         "&.Mui-selected": { bgcolor: "transparent" },

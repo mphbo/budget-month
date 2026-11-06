@@ -446,7 +446,7 @@ export const BudgetEditor = ({
       <Grid
         container
         columnSpacing={{ xs: 0, md: 10 }}
-        rowSpacing={{ xs: 2, md: 5 }}
+        rowSpacing={{ xs: 4, md: 5 }}
       >
         {(Object.keys(sectionTitles) as BudgetSection[]).map((section) => (
           <Grid key={`${section}-${savedVersion}`} size={{ xs: 12, md: 6 }}>
