@@ -31,7 +31,7 @@ export type EditableBudgetItem = {
   date?: string;
 };
 
-type SortColumn = "item" | "amount";
+type SortColumn = "item" | "amount" | "date";
 type SortDirection = "asc" | "desc";
 
 export const DataTable = ({
@@ -73,8 +73,10 @@ export const DataTable = ({
               numeric: true,
               sensitivity: "base",
             })
-          : (Number(left.entry.amount) || 0) -
-            (Number(right.entry.amount) || 0);
+          : sortColumn === "amount"
+            ? (Number(left.entry.amount) || 0) -
+              (Number(right.entry.amount) || 0)
+            : (left.entry.date ?? "").localeCompare(right.entry.date ?? "");
 
       return (
         (sortDirection === "asc" ? comparison : -comparison) ||
@@ -215,7 +217,19 @@ export const DataTable = ({
                 Amount
               </TableSortLabel>
             </TableCell>
-            {showDate && <TableCell>Date (optional)</TableCell>}
+            {showDate && (
+              <TableCell
+                sortDirection={sortColumn === "date" ? sortDirection : false}
+              >
+                <TableSortLabel
+                  active={sortColumn === "date"}
+                  direction={sortColumn === "date" ? sortDirection : "asc"}
+                  onClick={() => handleSort("date")}
+                >
+                  Date (optional)
+                </TableSortLabel>
+              </TableCell>
+            )}
             <TableCell padding="checkbox" />
           </TableRow>
         </TableHead>
