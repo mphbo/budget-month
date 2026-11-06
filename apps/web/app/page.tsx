@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { AccountList } from "./components/AccountList";
 import { EquityHistoryChart } from "./components/EquityHistoryChart";
 import { MonthList } from "./components/MonthList";
+import { Loading } from "./components/Loading";
 import {
   getAccounts,
   getEquityHistory,
@@ -13,7 +14,7 @@ import styles from "./page.module.css";
 
 const Home = () => {
   return (
-    <Suspense fallback={<p>Loading months...</p>}>
+    <Suspense fallback={<Loading />}>
       <HomeContent />
     </Suspense>
   );

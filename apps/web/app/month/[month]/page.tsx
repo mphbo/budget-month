@@ -2,6 +2,7 @@ import { Container, Typography } from "@mui/material";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { Loading } from "@/app/components/Loading";
 import { BudgetEditor } from "./components/BudgetEditor";
 import {
   getMonthBudget,
@@ -12,7 +13,7 @@ import styles from "./page.module.css";
 
 const MonthPage = ({ params }: { params: Promise<{ month: string }> }) => {
   return (
-    <Suspense fallback={<p>Loading budget...</p>}>
+    <Suspense fallback={<Loading />}>
       <MonthBudget params={params} />
     </Suspense>
   );
