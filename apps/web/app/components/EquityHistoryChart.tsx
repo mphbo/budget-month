@@ -344,25 +344,36 @@ export const EquityHistoryChart = ({
                   </g>
                 );
               })}
-              {[...labelIndices].map((index) => (
-                <text
-                  key={chartPoints[index].month}
-                  x={x(index)}
-                  y={plotBottom + 28}
-                  textAnchor={
-                    index === 0
-                      ? "start"
-                      : index === points.length - 1
-                        ? "end"
-                        : "middle"
-                  }
-                  fill="currentColor"
-                  opacity="0.7"
-                  fontSize="12"
-                >
-                  {chartPoints[index].month}
-                </text>
-              ))}
+              {[...labelIndices].map((index) => {
+                console.log({
+                  index,
+                  month: chartPoints[index].month,
+                  equity: chartPoints[index].equity,
+                });
+
+                const month = chartPoints[index].month.split(" ")[0];
+                const year = chartPoints[index].month.split(" ")[1];
+                const name = month.slice(0, 3) + " " + year.slice(-2);
+                return (
+                  <text
+                    key={chartPoints[index].month}
+                    x={x(index)}
+                    y={plotBottom + 28}
+                    textAnchor={
+                      index === 0
+                        ? "start"
+                        : index === points.length - 1
+                          ? "end"
+                          : "middle"
+                    }
+                    fill="currentColor"
+                    opacity="0.7"
+                    fontSize="12"
+                  >
+                    {name}
+                  </text>
+                );
+              })}
             </svg>
           </Box>
         )}
