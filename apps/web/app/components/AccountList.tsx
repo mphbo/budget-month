@@ -329,7 +329,7 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
                 sx={{
                   display: "flex",
                   alignItems: "center",
-                  paddingRight: "60px",
+                  paddingRight: "5%",
                 }}
               >
                 <ListItemText
