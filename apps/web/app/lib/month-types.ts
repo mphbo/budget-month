@@ -46,6 +46,7 @@ export type MonthOption = {
 
 export type EquityHistoryPoint = {
   month: string;
+  isFuture: boolean;
   categoryValues: Record<string, number>;
 };
 

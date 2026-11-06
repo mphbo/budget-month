@@ -1,11 +1,15 @@
 "use client";
 
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import Box from "@mui/material/Box";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import FormGroup from "@mui/material/FormGroup";
+import IconButton from "@mui/material/IconButton";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
+import Switch from "@mui/material/Switch";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useEffect, useRef, useState } from "react";
 import type { Account } from "../lib/account-types";
@@ -48,6 +52,7 @@ export const EquityHistoryChart = ({
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(640);
   const [activePointMonth, setActivePointMonth] = useState<string | null>(null);
+  const [includeFutureMonths, setIncludeFutureMonths] = useState(false);
   useEffect(() => {
     const container = chartContainerRef.current;
     if (!container) {
@@ -93,7 +98,10 @@ export const EquityHistoryChart = ({
   const selectedCategoryKeys = availableCategoryKeys.filter((key) =>
     selectedCategories.has(key),
   );
-  const chartPoints = points.map((point) => ({
+  const displayedPoints = points.filter(
+    (point) => includeFutureMonths || !point.isFuture,
+  );
+  const chartPoints = displayedPoints.map((point) => ({
     month: point.month,
     equity: selectedCategoryKeys.reduce(
       (total, key) => total + (point.categoryValues[key] ?? 0),
@@ -116,7 +124,9 @@ export const EquityHistoryChart = ({
     );
   }
 
-  const values = chartPoints.map((point) => point.equity);
+  const values = chartPoints.length
+    ? chartPoints.map((point) => point.equity)
+    : [0];
   const rawMin = Math.min(...values);
   const rawMax = Math.max(...values);
   const padding = rawMin === rawMax ? Math.max(Math.abs(rawMin) * 0.1, 1) : 0;
@@ -138,31 +148,37 @@ export const EquityHistoryChart = ({
   );
   const chartWidth = Math.max(
     containerWidth,
-    plotLeft + rightPadding + Math.max(points.length - 1, 1) * pointSpacing,
+    plotLeft +
+      rightPadding +
+      Math.max(displayedPoints.length - 1, 1) * pointSpacing,
   );
   const plotRight = chartWidth - rightPadding;
   const x = (index: number) =>
-    points.length === 1
+    displayedPoints.length <= 1
       ? (plotLeft + plotRight) / 2
-      : plotLeft + (index * (plotRight - plotLeft)) / (points.length - 1);
+      : plotLeft +
+        (index * (plotRight - plotLeft)) / (displayedPoints.length - 1);
   const y = (value: number) =>
     plotBottom - ((value - axisMin) / range) * (plotBottom - plotTop);
   const polyline = chartPoints
     .map((point, index) => `${x(index)},${y(point.equity)}`)
     .join(" ");
 
-  const pointGap = (plotRight - plotLeft) / Math.max(points.length - 1, 1);
+  const pointGap =
+    (plotRight - plotLeft) / Math.max(displayedPoints.length - 1, 1);
   const labelStep = Math.max(1, Math.ceil(96 / pointGap));
   const labelIndices = new Set<number>();
-  for (let index = 0; index < points.length; index += labelStep) {
+  for (let index = 0; index < displayedPoints.length; index += labelStep) {
     labelIndices.add(index);
   }
-  const lastIndex = points.length - 1;
-  const lastRegularIndex = lastIndex - (lastIndex % labelStep);
-  if (lastRegularIndex > 0 && lastRegularIndex !== lastIndex) {
-    labelIndices.delete(lastRegularIndex);
+  if (displayedPoints.length > 0) {
+    const lastIndex = displayedPoints.length - 1;
+    const lastRegularIndex = lastIndex - (lastIndex % labelStep);
+    if (lastRegularIndex > 0 && lastRegularIndex !== lastIndex) {
+      labelIndices.delete(lastRegularIndex);
+    }
+    labelIndices.add(lastIndex);
   }
-  labelIndices.add(lastIndex);
 
   return (
     <Paper
@@ -170,11 +186,54 @@ export const EquityHistoryChart = ({
       sx={{ minWidth: 0, p: 2.5, width: "100%" }}
       variant="outlined"
     >
-      <Stack spacing={0.5}>
-        <Typography variant="h5">Equity over time</Typography>
-        <Typography color="text.secondary" variant="body2">
-          Select categories to include in your equity trend
-        </Typography>
+      <Stack
+        alignItems="flex-start"
+        direction="row"
+        justifyContent="space-between"
+        spacing={1}
+      >
+        <Box>
+          <Typography variant="h5">Equity over time</Typography>
+          <Typography color="text.secondary" variant="body2">
+            Select categories to include in your equity trend
+          </Typography>
+        </Box>
+        <Stack alignItems="center" direction="row" spacing={0.25}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={includeFutureMonths}
+                disabled={!points.some((point) => point.isFuture)}
+                onChange={(event) =>
+                  setIncludeFutureMonths(event.target.checked)
+                }
+                size="small"
+              />
+            }
+            label="Future"
+            sx={{ mr: 0 }}
+          />
+          <Tooltip
+            arrow
+            enterTouchDelay={0}
+            leaveTouchDelay={3000}
+            placement="top"
+            title={
+              points.some((point) => point.isFuture)
+                ? "Show projected equity for future budget months."
+                : "Add a future budget month to see projected equity here."
+            }
+          >
+            <IconButton
+              aria-label="Future months chart information"
+              size="small"
+            >
+              <InfoOutlinedIcon
+                fontSize="small"
+                sx={{ color: "text.secondary" }}
+              />
+            </IconButton>
+          </Tooltip>
       </Stack>
       <Stack
         direction={{ xs: "column", sm: "row" }}
@@ -224,7 +283,11 @@ export const EquityHistoryChart = ({
         })}
       </Stack>
       <Box ref={chartContainerRef} sx={{ mt: 2, width: "100%" }}>
-        {selectedCategoryKeys.length === 0 ? (
+        {displayedPoints.length === 0 ? (
+          <Typography color="text.secondary">
+            Turn on future months to view your projected equity.
+          </Typography>
+        ) : selectedCategoryKeys.length === 0 ? (
           <Typography color="text.secondary">
             Select at least one category to show its equity history.
           </Typography>
@@ -326,7 +389,7 @@ export const EquityHistoryChart = ({
                       textAnchor={
                         index === 0
                           ? "start"
-                          : index === points.length - 1
+                          : index === displayedPoints.length - 1
                             ? "end"
                             : "middle"
                       }
@@ -352,7 +415,7 @@ export const EquityHistoryChart = ({
                   textAnchor={
                     index === 0
                       ? "start"
-                      : index === points.length - 1
+                      : index === displayedPoints.length - 1
                         ? "end"
                         : "middle"
                   }

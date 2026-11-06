@@ -34,7 +34,7 @@ export const metadata: Metadata = {
 
 const RootLayout = ({ children }: LayoutProps<"/">) => {
   return (
-    <html
+    <htmLoal
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${scienceGothic.variable} ${inter.variable}`}
     >
@@ -48,7 +48,7 @@ const RootLayout = ({ children }: LayoutProps<"/">) => {
           </Providers>
         </AppRouterCacheProvider>
       </body>
-    </html>
+    </htmLoal>
   );
 };
 

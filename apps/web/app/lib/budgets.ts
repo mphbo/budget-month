@@ -185,10 +185,7 @@ export const getEquityHistory = async (): Promise<EquityHistoryPoint[]> => {
   if (monthsError) {
     throw monthsError;
   }
-  const historicalMonths = months.filter(
-    (month) => month.month_start <= currentMonthStart(),
-  );
-  if (historicalMonths.length === 0) {
+  if (months.length === 0) {
     return [];
   }
 
@@ -217,7 +214,7 @@ export const getEquityHistory = async (): Promise<EquityHistoryPoint[]> => {
     .eq("section", "totalEquity")
     .in(
       "month_id",
-      historicalMonths.map((month) => month.id),
+      months.map((month) => month.id),
     );
 
   if (equityItemsError) {
@@ -244,7 +241,7 @@ export const getEquityHistory = async (): Promise<EquityHistoryPoint[]> => {
     categoryValuesByMonth.set(item.month_id, categoryValues);
   }
 
-  const currentMonth = historicalMonths.find(
+  const currentMonth = months.find(
     (month) => month.month_start === currentMonthStart(),
   );
   if (currentMonth) {
@@ -261,8 +258,9 @@ export const getEquityHistory = async (): Promise<EquityHistoryPoint[]> => {
     categoryValuesByMonth.set(currentMonth.id, currentCategoryValues);
   }
 
-  return historicalMonths.map((month) => ({
+  return months.map((month) => ({
     month: monthOption(month.month_start).name,
+    isFuture: month.month_start > currentMonthStart(),
     categoryValues: categoryValuesByMonth.get(month.id) ?? {},
   }));
 };
