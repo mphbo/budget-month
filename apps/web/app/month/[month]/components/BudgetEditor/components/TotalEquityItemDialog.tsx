@@ -10,14 +10,14 @@ import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import { useEffect, useState } from "react";
-import type { AccountCategory, AccountType } from "../lib/account-types";
+import type { AccountCategory, AccountType } from "@/app/lib/account-types";
 import {
   getAccountCategories,
   getDefaultAccountCategory,
   parseAccountCategory,
-} from "../lib/account-types";
-import type { EditableBudgetItem } from "../month/[month]/components/BudgetEditor/components/DataTable";
-import { AmountField } from "./AmountField";
+} from "@/app/lib/account-types";
+import type { EditableBudgetItem } from "./DataTable";
+import { AmountField } from "@/app/components/AmountField";
 
 export const TotalEquityItemDialog = ({
   open,

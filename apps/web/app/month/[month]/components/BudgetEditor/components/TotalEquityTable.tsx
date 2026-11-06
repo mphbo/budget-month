@@ -16,7 +16,7 @@ import TableSortLabel from "@mui/material/TableSortLabel";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
-import { TotalEquityItemDialog } from "@/app/components/TotalEquityItemDialog";
+import { TotalEquityItemDialog } from "./TotalEquityItemDialog";
 import { UnsavedChangesIndicator } from "@/app/components/UnsavedChangesIndicator";
 import {
   isFixedAssetCategory,

@@ -12,7 +12,7 @@ import type { Account } from "../lib/account-types";
 import type { EquityHistoryPoint } from "../lib/month-types";
 
 const chartHeight = 240;
-const minimumPlotLeft = 112;
+const minimumPlotLeft = 90;
 const plotTop = 16;
 const plotBottom = 176;
 const rightPadding = 24;
