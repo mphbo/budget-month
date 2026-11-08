@@ -35,7 +35,7 @@ const HomeContent = async () => {
 
   return (
     <div className={styles.page}>
-      <Container sx={{ backgroundColor: "#23272f", p: { xs: 0 } }}>
+      <Container sx={{ backgroundColor: "#23272f", p: { xs: "0 4px" } }}>
         <main className={styles.main}>
           <Box sx={{ m: { xs: "0 16px" } }}>
             <Typography variant="h2" sx={{ mb: 3.5 }}>

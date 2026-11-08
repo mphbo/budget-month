@@ -11,10 +11,10 @@ import { useEffect, useRef, useState } from "react";
 import type { Account } from "../lib/account-types";
 import type { EquityHistoryPoint } from "../lib/month-types";
 
-const chartHeight = 340;
+const chartHeight = 400;
 const minimumPlotLeft = 90;
 const plotTop = 16;
-const plotBottom = 276;
+const plotBottom = 336;
 const rightPadding = 24;
 const pointSpacing = 72;
 const currency = new Intl.NumberFormat("en-US", {
