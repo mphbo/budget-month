@@ -5,8 +5,8 @@ import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import { useActionState } from "react";
-import { updatePassword } from "../actions/auth";
-import { PASSWORD_REQUIREMENTS_PATTERN } from "../lib/password";
+import { updatePassword } from "@/app/actions/auth";
+import { PASSWORD_REQUIREMENTS_PATTERN } from "@/app/lib/password";
 
 export const UpdatePasswordForm = () => {
   const [state, formAction, isPending] = useActionState(updatePassword, {});

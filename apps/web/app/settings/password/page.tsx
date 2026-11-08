@@ -1,5 +1,5 @@
 import { Container, Stack, Typography } from "@mui/material";
-import { UpdatePasswordForm } from "../../components/UpdatePasswordForm";
+import { UpdatePasswordForm } from "./components/UpdatePasswordForm";
 
 const PasswordSettingsPage = () => (
   <Container maxWidth="sm" sx={{ py: 8 }}>

@@ -457,7 +457,14 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
           months remain historical snapshots.
         </Alert>
         {savedMessage && <Alert severity="success">{savedMessage}</Alert>}
-        <Box sx={{ alignItems: "center", display: "flex", gap: 0.5 }}>
+        <Box
+          sx={{
+            alignItems: "center",
+            display: "flex",
+            gap: 0.5,
+            justifyContent: "flex-end",
+          }}
+        >
           <Tooltip
             enterTouchDelay={0}
             leaveTouchDelay={3000}
