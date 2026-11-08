@@ -35,15 +35,17 @@ const HomeContent = async () => {
 
   return (
     <div className={styles.page}>
-      <Container sx={{ backgroundColor: "#23272f" }}>
+      <Container sx={{ backgroundColor: "#23272f", p: { xs: 0 } }}>
         <main className={styles.main}>
-          <Typography variant="h2" sx={{ mb: 3.5 }}>
-            Budget Month
-          </Typography>
-          <Typography sx={{ mb: 8 }}>
-            Here is an overview of your finances, add/review accounts here or
-            jump into one of your monthly budgets.
-          </Typography>
+          <Box sx={{ m: { xs: "0 16px" } }}>
+            <Typography variant="h2" sx={{ mb: 3.5 }}>
+              Budget Month
+            </Typography>
+            <Typography sx={{ mb: 8 }}>
+              Here is an overview of your finances, add/review accounts here or
+              jump into one of your monthly budgets.
+            </Typography>
+          </Box>
           <EquityHistoryChart accounts={accounts} points={equityHistory} />
           <Box
             sx={{
