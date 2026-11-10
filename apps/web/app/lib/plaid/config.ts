@@ -70,7 +70,7 @@ export const getPlaidConfig = () => {
     products,
     optionalProducts: parseList(
       process.env.PLAID_OPTIONAL_PRODUCTS,
-      "",
+      `${Products.Investments},${Products.Liabilities}`,
       allProducts,
       "PLAID_OPTIONAL_PRODUCTS",
     ).filter((product) => !products.includes(product)),
