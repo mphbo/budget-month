@@ -225,10 +225,10 @@ export const EquityHistoryChart = ({
             }
             label={
               <>
-                <Typography sx={{ fontSize: "0.75rem" }}>
+                <Typography sx={{ fontSize: "0.875rem" }}>
                   Include future
                 </Typography>
-                <Typography sx={{ fontSize: "0.75rem" }}>
+                <Typography sx={{ fontSize: "0.875rem" }}>
                   projections
                 </Typography>
               </>
