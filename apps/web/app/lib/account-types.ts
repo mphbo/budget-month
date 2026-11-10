@@ -93,6 +93,7 @@ export type Account = {
   type: AccountType;
   category: AccountCategory;
   amount: number;
+  plaidItemId?: string | null;
 };
 
 export type AccountInput = {

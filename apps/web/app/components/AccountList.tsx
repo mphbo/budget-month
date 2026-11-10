@@ -4,6 +4,7 @@ import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import AddIcon from "@mui/icons-material/Add";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import EditIcon from "@mui/icons-material/Edit";
+import LinkIcon from "@mui/icons-material/Link";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
@@ -19,6 +20,7 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   Account,
@@ -36,8 +38,13 @@ import {
 } from "../lib/account-types";
 import { getApiErrorMessage } from "../lib/api-response";
 import { formatCurrency } from "../lib/formatting";
+import type {
+  LinkedAccountBalance,
+  LinkedInstitution,
+} from "../lib/linked-institution-types";
 import { AddAccountDialog } from "./AddAccountDialog";
 import { AmountField } from "./AmountField";
+import { LinkedInstitutions } from "./LinkedInstitutions";
 import { ResetChanges } from "./ResetChanges";
 import { UnsavedChangesIndicator } from "./UnsavedChangesIndicator";
 
@@ -74,10 +81,28 @@ const accountSnapshot = (accounts: AccountInput[]) =>
     })),
   );
 
-export const AccountList = ({ accounts }: { accounts: Account[] }) => {
+export const AccountList = ({
+  accounts,
+  canLinkInstitutions = false,
+  linkedInstitutions: initialLinkedInstitutions = [],
+}: {
+  accounts: Account[];
+  canLinkInstitutions?: boolean;
+  linkedInstitutions?: LinkedInstitution[];
+}) => {
+  const router = useRouter();
   const [draft, setDraft] = useState(accounts.map(toEditableAccount));
   const [savedAccounts, setSavedAccounts] = useState(
-    accounts.map((account) => toAccountUpdateInput(toEditableAccount(account))),
+    accounts.map(toEditableAccount),
+  );
+  const [linkedInstitutions, setLinkedInstitutions] = useState(
+    initialLinkedInstitutions,
+  );
+  const institutionNames = new Map(
+    linkedInstitutions.map((institution) => [
+      institution.id,
+      institution.institutionName,
+    ]),
   );
   const savedAccountsRef = useRef(savedAccounts);
   savedAccountsRef.current = savedAccounts;
@@ -91,12 +116,16 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
   const liabilities = draft.filter((account) => account.type === "liability");
   const isDirty =
     accountSnapshot(draft.map(toAccountInput)) !==
-    accountSnapshot(savedAccounts);
+    accountSnapshot(savedAccounts.map(toAccountInput));
   const isSectionDirty = (type: AccountType) =>
     accountSnapshot(
       draft.filter((account) => account.type === type).map(toAccountInput),
     ) !==
-    accountSnapshot(savedAccounts.filter((account) => account.type === type));
+    accountSnapshot(
+      savedAccounts
+        .filter((account) => account.type === type)
+        .map(toAccountInput),
+    );
   const resetChanges = () => {
     setDraft(savedAccounts.map((account) => ({ ...account })));
     setEditingIds(new Set());
@@ -172,14 +201,62 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
   const addAccount = (account: Account) => {
     const editableAccount = toEditableAccount(account);
     setDraft((current) => [...current, editableAccount]);
-    savedAccountsRef.current = [
-      ...savedAccountsRef.current,
-      toAccountUpdateInput(editableAccount),
-    ];
+    savedAccountsRef.current = [...savedAccountsRef.current, editableAccount];
     setSavedAccounts(savedAccountsRef.current);
     setSavedMessage("Account added.");
     setError(null);
   };
+
+  const updateSavedAndDraft = (
+    update: (current: EditableAccount[]) => EditableAccount[],
+  ) => {
+    setDraft(update);
+    savedAccountsRef.current = update(savedAccountsRef.current);
+    setSavedAccounts(savedAccountsRef.current);
+    router.refresh();
+  };
+
+  const addLinkedAccounts = (linkedAccounts: Account[]) =>
+    updateSavedAndDraft((current) => {
+      const linkedById = new Map(
+        linkedAccounts.map((account) => [
+          account.id,
+          toEditableAccount(account),
+        ]),
+      );
+      const updated = current.map((account) => {
+        const linked = linkedById.get(account.id);
+        return linked ? { ...account, amount: linked.amount } : account;
+      });
+      const existingIds = new Set(current.map((account) => account.id));
+      return [
+        ...updated,
+        ...[...linkedById.values()].filter(
+          (account) => !existingIds.has(account.id),
+        ),
+      ];
+    });
+
+  const applyLinkedBalances = (balances: LinkedAccountBalance[]) => {
+    const amounts = new Map(
+      balances.map((balance) => [balance.id, balance.amount.toFixed(2)]),
+    );
+    updateSavedAndDraft((current) =>
+      current.map((account) => {
+        const amount = amounts.get(account.id);
+        return amount === undefined ? account : { ...account, amount };
+      }),
+    );
+  };
+
+  const detachInstitution = (institutionId: string) =>
+    updateSavedAndDraft((current) =>
+      current.map((account) =>
+        account.plaidItemId === institutionId
+          ? { ...account, plaidItemId: null }
+          : account,
+      ),
+    );
 
   const saveAccounts = async () => {
     if (hasDuplicateNames(draft.map((account) => account.name))) {
@@ -212,7 +289,6 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
     setSavedMessage(null);
 
     try {
-      const input = draft.map(toAccountUpdateInput);
       const response = await fetch("/api/accounts", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -225,8 +301,8 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
         );
       }
 
-      savedAccountsRef.current = input;
-      setSavedAccounts(input);
+      savedAccountsRef.current = draft.map((account) => ({ ...account }));
+      setSavedAccounts(savedAccountsRef.current);
       setSavedMessage("Account changes saved.");
     } catch (saveError) {
       setError(
@@ -241,6 +317,9 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
 
   const renderAccount = (account: EditableAccount, index: number) => {
     const isEditing = editingIds.has(account.id);
+    const institutionName = account.plaidItemId
+      ? institutionNames.get(account.plaidItemId)
+      : undefined;
 
     return (
       <ListItem
@@ -314,8 +393,13 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
                 </TextField>
                 <AmountField
                   aria-label={`Account amount ${index + 1}`}
-                  disabled={isSaving}
+                  disabled={isSaving || Boolean(institutionName)}
                   fullWidth
+                  helperText={
+                    institutionName
+                      ? `Synced from ${institutionName}`
+                      : undefined
+                  }
                   label="Amount"
                   onAmountChange={(amount) =>
                     updateAccount(account.id, { amount })
@@ -334,7 +418,24 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
               >
                 <ListItemText
                   primary={account.name}
-                  secondary={account.category}
+                  secondary={
+                    institutionName ? (
+                      <Box
+                        component="span"
+                        sx={{ alignItems: "center", display: "flex", gap: 0.5 }}
+                      >
+                        {account.category}
+                        <Tooltip title={`Synced from ${institutionName}`}>
+                          <LinkIcon
+                            aria-label={`Synced from ${institutionName}`}
+                            fontSize="inherit"
+                          />
+                        </Tooltip>
+                      </Box>
+                    ) : (
+                      account.category
+                    )
+                  }
                 />
                 <Typography>
                   {formatCurrency(Number(account.amount))}
@@ -389,6 +490,19 @@ export const AccountList = ({ accounts }: { accounts: Account[] }) => {
       }}
     >
       <Stack spacing={3}>
+        {canLinkInstitutions && (
+          <>
+            <LinkedInstitutions
+              disabled={isSaving}
+              institutions={linkedInstitutions}
+              onAccountsLinked={addLinkedAccounts}
+              onBalancesRefreshed={applyLinkedBalances}
+              onInstitutionsChange={setLinkedInstitutions}
+              onUnlinked={detachInstitution}
+            />
+            <Divider />
+          </>
+        )}
         {error && <Alert severity="error">{error}</Alert>}
         <Box
           sx={{
