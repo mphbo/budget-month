@@ -9,14 +9,15 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useEffect, useRef, useState } from "react";
 import type { Account } from "../lib/account-types";
-import type { EquityHistoryPoint } from "../lib/month-types";
+import type { EquityHistoryPoint, MonthOption } from "../lib/month-types";
+import { Switch } from "@mui/material";
 
 const chartHeight = 400;
 const minimumPlotLeft = 90;
 const plotTop = 16;
 const plotBottom = 336;
 const rightPadding = 24;
-const pointSpacing = 72;
+const pointSpacing = 0;
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -39,13 +40,18 @@ const getNiceStep = (value: number) => {
 };
 
 export const EquityHistoryChart = ({
-  points,
+  allPoints,
   accounts,
+  currentMonth,
 }: {
-  points: EquityHistoryPoint[];
+  allPoints: EquityHistoryPoint[];
   accounts: Account[];
+  currentMonth: MonthOption;
 }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const [includeFutureProjections, setIncludeFutureProjections] =
+    useState(false);
+  const [points, setPoints] = useState<EquityHistoryPoint[]>(allPoints);
   const [containerWidth, setContainerWidth] = useState(640);
   const [activePointMonth, setActivePointMonth] = useState<string | null>(null);
   useEffect(() => {
@@ -60,6 +66,25 @@ export const EquityHistoryChart = ({
     observer.observe(container);
     return () => observer.disconnect();
   }, []);
+
+  const currentMonthIndex = allPoints.findIndex(
+    (point: EquityHistoryPoint) => point.month === currentMonth.name,
+  );
+
+  const filteredPoints =
+    currentMonthIndex >= 0
+      ? allPoints.slice(0, currentMonthIndex + 1)
+      : allPoints;
+
+  const isFutureMonths = filteredPoints < allPoints;
+
+  useEffect(() => {
+    if (!includeFutureProjections) {
+      isFutureMonths && setPoints(filteredPoints);
+    } else {
+      setPoints(allPoints);
+    }
+  }, [includeFutureProjections, allPoints, currentMonth]);
 
   const categoryKey = (type: Account["type"], category: string) =>
     `${type}:${category}`;
@@ -170,12 +195,47 @@ export const EquityHistoryChart = ({
       sx={{ minWidth: 0, p: 2.5, width: "100%" }}
       variant="outlined"
     >
-      <Stack spacing={0.5}>
-        <Typography variant="h5">Equity over time</Typography>
-        <Typography color="text.secondary" variant="body2">
-          Select categories to include in your equity trend
-        </Typography>
-      </Stack>
+      <Box
+        sx={{
+          display: { xs: "block", md: "flex" },
+          justifyContent: "space-between",
+        }}
+      >
+        <Stack spacing={0.5}>
+          <Typography variant="h5">Equity over time</Typography>
+          <Typography color="text.secondary" variant="body2">
+            Select categories to include in your equity trend
+          </Typography>
+        </Stack>
+        {isFutureMonths && (
+          <FormControlLabel
+            sx={{
+              ml: 0,
+              display: "flex",
+              justifyContent: { xs: "flex-start", md: "flex-end" },
+              mt: { xs: "12px", md: 0 },
+            }}
+            control={
+              <Switch
+                checked={includeFutureProjections}
+                onChange={(event) =>
+                  setIncludeFutureProjections(event.target.checked)
+                }
+              />
+            }
+            label={
+              <>
+                <Typography sx={{ fontSize: "0.75rem" }}>
+                  Include future
+                </Typography>
+                <Typography sx={{ fontSize: "0.75rem" }}>
+                  projections
+                </Typography>
+              </>
+            }
+          />
+        )}
+      </Box>
       <Stack
         direction={{ xs: "column", sm: "row" }}
         spacing={2}
@@ -345,12 +405,6 @@ export const EquityHistoryChart = ({
                 );
               })}
               {[...labelIndices].map((index) => {
-                console.log({
-                  index,
-                  month: chartPoints[index].month,
-                  equity: chartPoints[index].equity,
-                });
-
                 const month = chartPoints[index].month.split(" ")[0];
                 const year = chartPoints[index].month.split(" ")[1];
                 const name = month.slice(0, 3) + " " + year.slice(-2);

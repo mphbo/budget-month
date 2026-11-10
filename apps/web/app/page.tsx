@@ -46,7 +46,16 @@ const HomeContent = async () => {
               jump into one of your monthly budgets.
             </Typography>
           </Box>
-          <EquityHistoryChart accounts={accounts} points={equityHistory} />
+          <EquityHistoryChart
+            accounts={accounts}
+            allPoints={equityHistory}
+            currentMonth={
+              months.find((month) => month.slug === currentMonthSlug) || {
+                slug: "",
+                name: "",
+              }
+            }
+          />
           <Box
             sx={{
               display: "flex",
