@@ -7,11 +7,6 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
-import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
@@ -22,12 +17,13 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
 import { usePlaidLink } from "react-plaid-link";
-import type { Account } from "../lib/account-types";
-import { getApiErrorMessage, readApiJson } from "../lib/api-response";
+import type { Account } from "../../../../lib/account-types";
+import { getApiErrorMessage, readApiJson } from "../../../../lib/api-response";
 import type {
   LinkedAccountBalance,
   LinkedInstitution,
-} from "../lib/linked-institution-types";
+} from "../../../../lib/linked-institution-types";
+import { DisconnectInstitutionDialog } from "./components/DisconnectInstitutionDialog";
 
 type LinkSession =
   | { mode: "connect"; token: string }
@@ -223,41 +219,6 @@ export const LinkedInstitutions = ({
     }
   };
 
-  const unlinkInstitution = async (institution: LinkedInstitution) => {
-    setBusyId(institution.id);
-    setError(null);
-    setMessage(null);
-
-    try {
-      const response = await fetch(
-        `/api/plaid/institutions/${institution.id}`,
-        { method: "DELETE" },
-      );
-      if (!response.ok) {
-        throw new Error(
-          await getApiErrorMessage(response, "Could not disconnect"),
-        );
-      }
-
-      onInstitutionsChange((current) =>
-        current.filter((entry) => entry.id !== institution.id),
-      );
-      onUnlinked(institution.id);
-      setMessage(
-        `Disconnected ${institution.institutionName}. Its accounts were kept as manual accounts.`,
-      );
-    } catch (unlinkError) {
-      setError(
-        unlinkError instanceof Error
-          ? unlinkError.message
-          : "Could not disconnect.",
-      );
-    } finally {
-      setBusyId(null);
-      setUnlinkTarget(null);
-    }
-  };
-
   const { open, ready } = usePlaidLink({
     token: linkSession?.token ?? null,
     onSuccess: (publicToken) => {
@@ -293,7 +254,7 @@ export const LinkedInstitutions = ({
           alignItems: "center",
           display: "flex",
           flexWrap: "wrap",
-          gap: 1,
+          gap: 3,
           justifyContent: "space-between",
         }}
       >
@@ -396,33 +357,17 @@ export const LinkedInstitutions = ({
           ))}
         </List>
       )}
-      <Dialog
-        onClose={() => busyId === null && setUnlinkTarget(null)}
-        open={unlinkTarget !== null}
-      >
-        <DialogTitle>Disconnect {unlinkTarget?.institutionName}?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Balances will stop updating automatically. The accounts stay on your
-            dashboard as manual accounts that you can edit or remove.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            disabled={busyId !== null}
-            onClick={() => setUnlinkTarget(null)}
-          >
-            Cancel
-          </Button>
-          <Button
-            color="error"
-            disabled={busyId !== null}
-            onClick={() => unlinkTarget && void unlinkInstitution(unlinkTarget)}
-          >
-            {busyId !== null ? "Disconnecting..." : "Disconnect"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <DisconnectInstitutionDialog
+        unlinkTarget={unlinkTarget}
+        setUnlinkTarget={setUnlinkTarget}
+        busyId={busyId}
+        setBusyId={setBusyId}
+        onInstitutionsChange={onInstitutionsChange}
+        onUnlinked={onUnlinked}
+        setError={setError}
+        setMessage={setMessage}
+        getApiErrorMessage={getApiErrorMessage}
+      />
     </Stack>
   );
 };

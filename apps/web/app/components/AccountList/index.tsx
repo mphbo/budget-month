@@ -2,10 +2,6 @@
 
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import AddIcon from "@mui/icons-material/Add";
-import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
-import EditIcon from "@mui/icons-material/Edit";
-import LinkIcon from "@mui/icons-material/Link";
-import PaymentsIcon from "@mui/icons-material/Payments";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -15,9 +11,7 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
-import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
@@ -27,28 +21,25 @@ import type {
   AccountInput,
   AccountType,
   AccountUpdateInput,
-} from "../lib/account-types";
+} from "../../lib/account-types";
 import {
-  getAccountCategories,
-  getDefaultAccountCategory,
   hasDuplicateNames,
   isFixedAssetCategory,
   LIABILITY_CATEGORIES,
-  parseAccountCategory,
-} from "../lib/account-types";
-import { getApiErrorMessage } from "../lib/api-response";
-import { formatCurrency } from "../lib/formatting";
+} from "../../lib/account-types";
+import { getApiErrorMessage } from "../../lib/api-response";
+import { formatCurrency } from "../../lib/formatting";
 import type {
   LinkedAccountBalance,
   LinkedInstitution,
-} from "../lib/linked-institution-types";
-import { AddAccountDialog } from "./AddAccountDialog";
-import { AmountField } from "./AmountField";
-import { LinkedInstitutions } from "./LinkedInstitutions";
-import { ResetChanges } from "./ResetChanges";
-import { UnsavedChangesIndicator } from "./UnsavedChangesIndicator";
+} from "../../lib/linked-institution-types";
+import { AddAccountDialog } from "../AddAccountDialog";
+import { LinkedInstitutions } from "./components/LinkedInstitutions";
+import { ResetChanges } from "../ResetChanges";
+import { UnsavedChangesIndicator } from "../UnsavedChangesIndicator";
+import { AccountItem } from "./components/AccountItem";
 
-type EditableAccount = Omit<Account, "amount"> & { amount: string };
+export type EditableAccount = Omit<Account, "amount"> & { amount: string };
 
 const toEditableAccount = (account: Account): EditableAccount => ({
   ...account,
@@ -97,12 +88,6 @@ export const AccountList = ({
   );
   const [linkedInstitutions, setLinkedInstitutions] = useState(
     initialLinkedInstitutions,
-  );
-  const institutionNames = new Map(
-    linkedInstitutions.map((institution) => [
-      institution.id,
-      institution.institutionName,
-    ]),
   );
   const savedAccountsRef = useRef(savedAccounts);
   savedAccountsRef.current = savedAccounts;
@@ -187,16 +172,6 @@ export const AccountList = ({
     return () =>
       document.removeEventListener("pointerdown", handleDocumentPointerDown);
   }, [editingIds]);
-
-  const updateAccount = (id: string, patch: Partial<EditableAccount>) => {
-    setDraft((current) =>
-      current.map((account) =>
-        account.id === id ? { ...account, ...patch } : account,
-      ),
-    );
-    setError(null);
-    setSavedMessage(null);
-  };
 
   const addAccount = (account: Account) => {
     const editableAccount = toEditableAccount(account);
@@ -315,171 +290,6 @@ export const AccountList = ({
     }
   };
 
-  const renderAccount = (account: EditableAccount, index: number) => {
-    const isEditing = editingIds.has(account.id);
-    const institutionName = account.plaidItemId
-      ? institutionNames.get(account.plaidItemId)
-      : undefined;
-
-    return (
-      <ListItem
-        data-account-row={account.id}
-        disablePadding
-        key={account.id}
-        sx={{ py: 1 }}
-      >
-        <Box sx={{ display: "flex", gap: 1.5, width: "100%", minWidth: 0 }}>
-          <ListItemIcon sx={{ minWidth: 36, alignSelf: "center" }}>
-            {account.type === "asset" ? <AttachMoneyIcon /> : <PaymentsIcon />}
-          </ListItemIcon>
-          <Stack spacing={0.75} sx={{ flex: 1, minWidth: 0 }}>
-            {isEditing ? (
-              <>
-                <TextField
-                  aria-label={`Account name ${index + 1}`}
-                  disabled={isSaving}
-                  fullWidth
-                  label="Name"
-                  onChange={(event) =>
-                    updateAccount(account.id, { name: event.target.value })
-                  }
-                  size="small"
-                  value={account.name}
-                />
-                <TextField
-                  aria-label={`Account type ${index + 1}`}
-                  disabled={isSaving}
-                  fullWidth
-                  label="Type"
-                  onChange={(event) => {
-                    if (
-                      event.target.value === "asset" ||
-                      event.target.value === "liability"
-                    ) {
-                      updateAccount(account.id, {
-                        type: event.target.value as AccountType,
-                        category: getDefaultAccountCategory(event.target.value),
-                      });
-                    }
-                  }}
-                  select
-                  size="small"
-                  value={account.type}
-                >
-                  <MenuItem value="asset">Asset</MenuItem>
-                  <MenuItem value="liability">Liability</MenuItem>
-                </TextField>
-                <TextField
-                  aria-label={`Account category ${index + 1}`}
-                  disabled={isSaving}
-                  fullWidth
-                  label="Category"
-                  onChange={(event) =>
-                    updateAccount(account.id, {
-                      category: parseAccountCategory(event.target.value),
-                    })
-                  }
-                  size="small"
-                  select
-                  value={account.category}
-                >
-                  {getAccountCategories(account.type, account.category).map(
-                    (category) => (
-                      <MenuItem key={category} value={category}>
-                        {category}
-                      </MenuItem>
-                    ),
-                  )}
-                </TextField>
-                <AmountField
-                  aria-label={`Account amount ${index + 1}`}
-                  disabled={isSaving || Boolean(institutionName)}
-                  fullWidth
-                  helperText={
-                    institutionName
-                      ? `Synced from ${institutionName}`
-                      : undefined
-                  }
-                  label="Amount"
-                  onAmountChange={(amount) =>
-                    updateAccount(account.id, { amount })
-                  }
-                  size="small"
-                  value={account.amount}
-                />
-              </>
-            ) : (
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  paddingRight: "5%",
-                }}
-              >
-                <ListItemText
-                  primary={account.name}
-                  secondary={
-                    institutionName ? (
-                      <Box
-                        component="span"
-                        sx={{ alignItems: "center", display: "flex", gap: 0.5 }}
-                      >
-                        {account.category}
-                        <Tooltip title={`Synced from ${institutionName}`}>
-                          <LinkIcon
-                            aria-label={`Synced from ${institutionName}`}
-                            fontSize="inherit"
-                          />
-                        </Tooltip>
-                      </Box>
-                    ) : (
-                      account.category
-                    )
-                  }
-                />
-                <Typography>
-                  {formatCurrency(Number(account.amount))}
-                </Typography>
-              </Box>
-            )}
-          </Stack>
-          {!isEditing && (
-            <IconButton
-              aria-label={`Edit ${account.name}`}
-              disabled={isSaving}
-              onClick={() =>
-                setEditingIds((current) => new Set(current).add(account.id))
-              }
-              size="small"
-              sx={{ alignSelf: "center" }}
-            >
-              <EditIcon fontSize="small" />
-            </IconButton>
-          )}
-          <IconButton
-            aria-label={`Remove ${account.name}`}
-            disabled={isSaving}
-            onClick={() => {
-              setDraft((current) =>
-                current.filter((entry) => entry.id !== account.id),
-              );
-              setEditingIds((current) => {
-                const next = new Set(current);
-                next.delete(account.id);
-                return next;
-              });
-              setSavedMessage(null);
-            }}
-            size="small"
-            sx={{ alignSelf: "center" }}
-          >
-            x
-          </IconButton>
-        </Box>
-      </ListItem>
-    );
-  };
-
   return (
     <Box
       sx={{
@@ -517,7 +327,20 @@ export const AccountList = ({
           )}
         </Box>
         <List>
-          {assets.map((account, index) => renderAccount(account, index))}
+          {assets.map((account, index) => (
+            <AccountItem
+              account={account}
+              key={index}
+              index={index}
+              linkedInstitutions={linkedInstitutions}
+              editingIds={editingIds}
+              isSaving={isSaving}
+              setDraft={setDraft}
+              setEditingIds={setEditingIds}
+              setError={setError}
+              setSavedMessage={setSavedMessage}
+            />
+          ))}
           {assets.length === 0 && (
             <ListItem>
               <ListItemText primary="No assets yet" />
@@ -538,7 +361,20 @@ export const AccountList = ({
           )}
         </Box>
         <List>
-          {liabilities.map((account, index) => renderAccount(account, index))}
+          {liabilities.map((account, index) => (
+            <AccountItem
+              account={account}
+              key={index}
+              index={index}
+              linkedInstitutions={linkedInstitutions}
+              editingIds={editingIds}
+              isSaving={isSaving}
+              setDraft={setDraft}
+              setEditingIds={setEditingIds}
+              setError={setError}
+              setSavedMessage={setSavedMessage}
+            />
+          ))}
           {liabilities.length === 0 && (
             <ListItem>
               <ListItemText primary="No liabilities yet" />
