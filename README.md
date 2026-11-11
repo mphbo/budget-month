@@ -20,6 +20,18 @@ A budgeting monorepo with a Next.js web app, an Expo mobile app, and shared Supa
 
 The Expo app supports email/password sign-in and sign-up, email confirmation deep links, account management, month creation/deletion, and editing monthly budgets. It uses native secure storage for auth sessions, and reads/writes the same user-owned Supabase data under Row Level Security as the web app.
 
+## Connected institutions (Plaid)
+
+Users can sign in to their bank or other financial institution from the dashboard using [Plaid Link](https://plaid.com/docs/link/). Linked accounts are imported into the account list, and their balances refresh on demand and stay in sync with the current month's Total Equity.
+
+1. Create a Plaid account and copy the sandbox `client_id` and secret from the Plaid dashboard.
+2. Set `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV` (`sandbox` or `production`), and `PLAID_TOKEN_ENCRYPTION_KEY` (`openssl rand -base64 32`) in `apps/web/.env.local` and in Vercel. These variables are server-only and must never use a `NEXT_PUBLIC_` prefix.
+3. Apply `20261110000000_plaid_linked_institutions.sql`.
+
+Plaid access tokens are encrypted with AES-256-GCM before they are stored, and the `access_token_encrypted` column is not readable through the Supabase API. If the encryption key is lost, the affected institutions must be reconnected. Balances come from Plaid's `/accounts/get` (cached by Plaid), not the per-call billed `/accounts/balance/get`. By default Link requests `transactions`, with `investments` and `liabilities` as optional products. Override these with `PLAID_PRODUCTS` and `PLAID_OPTIONAL_PRODUCTS`, since each product can add Plaid billing. The dashboard hides the feature when Plaid is not configured. Access is decided by `canUseLinkedInstitutions` in `apps/web/app/lib/plaid/entitlement.ts`, which is where plan or subscription checks belong.
+
+Balances from a linked account are read-only on the dashboard. Disconnecting an institution removes the Plaid item and keeps its accounts as manual accounts. When a bank login expires, the institution shows **Reconnect**, which reopens Plaid Link in update mode.
+
 ## Commands
 
 - `npm run dev:web` — start Next.js.

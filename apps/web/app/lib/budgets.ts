@@ -35,7 +35,7 @@ const monthNames = [
   "December",
 ];
 
-const getAuthorizedSupabaseClient = async () => {
+export const getAuthorizedSupabaseClient = async () => {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.getClaims();
 
@@ -268,7 +268,7 @@ export const getAccounts = async (): Promise<Account[]> => {
   const { supabase, userId } = await getAuthorizedSupabaseClient();
   const { data, error } = await supabase
     .from("account_items")
-    .select("id, name, account_type, category, amount")
+    .select("id, name, account_type, category, amount, plaid_item_id")
     .eq("user_id", userId)
     .order("sort_order", { ascending: true });
 
@@ -288,6 +288,7 @@ export const getAccounts = async (): Promise<Account[]> => {
       type,
       category: parseAccountCategory(account.category),
       amount: Number(account.amount),
+      plaidItemId: account.plaid_item_id ?? null,
     };
   });
 };

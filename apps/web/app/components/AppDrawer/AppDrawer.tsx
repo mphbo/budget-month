@@ -19,8 +19,8 @@ import Tooltip from "@mui/material/Tooltip";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { signOut } from "../actions/auth";
-import type { MonthOption } from "../lib/month-types";
+import { signOut } from "@/app/actions/auth";
+import type { MonthOption } from "@/app/lib/month-types";
 import styles from "./AppDrawer.module.css";
 
 export const AppDrawer = ({
