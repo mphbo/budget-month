@@ -12,7 +12,7 @@ const parseList = <T extends string>(
 ): T[] => {
   const entries = (value ?? fallback)
     .split(",")
-    .map((entry) => entry.trim())i
+    .map((entry) => entry.trim())
     .filter(Boolean);
 
   for (const entry of entries) {
@@ -27,8 +27,8 @@ const parseList = <T extends string>(
 export const isPlaidConfigured = () =>
   Boolean(
     process.env.PLAID_CLIENT_ID &&
-      process.env.PLAID_SECRET &&
-      process.env.PLAID_TOKEN_ENCRYPTION_KEY,
+    process.env.PLAID_SECRET &&
+    process.env.PLAID_TOKEN_ENCRYPTION_KEY,
   );
 
 export const getPlaidConfig = () => {
@@ -70,7 +70,7 @@ export const getPlaidConfig = () => {
     products,
     optionalProducts: parseList(
       process.env.PLAID_OPTIONAL_PRODUCTS,
-      `${Products.Investments},${Products.Liabilities}`,
+      "",
       allProducts,
       "PLAID_OPTIONAL_PRODUCTS",
     ).filter((product) => !products.includes(product)),
