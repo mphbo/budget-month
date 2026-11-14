@@ -19,7 +19,6 @@ const syncSubscription = async (
 
   let userId = subscription.metadata?.supabase_user_id || fallbackUserId;
 
-  // Fall back to the customer mapping if metadata is unavailable.
   if (!userId) {
     const { data: customer, error } = await supabaseAdmin
       .from("billing_customers")
@@ -73,123 +72,163 @@ const syncSubscription = async (
 };
 
 export const POST = async (request: Request) => {
-  const stripe = getStripeClient();
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  const signature = request.headers.get("stripe-signature");
-
-  if (!webhookSecret) {
-    console.error("STRIPE_WEBHOOK_SECRET is not configured.");
-
-    return NextResponse.json(
-      { error: "Webhook is not configured." },
-      { status: 500 },
-    );
-  }
-
-  if (!signature) {
-    return NextResponse.json(
-      { error: "Missing Stripe signature." },
-      { status: 400 },
-    );
-  }
-
-  // Stripe signature verification requires the unmodified request body.
-  const payload = await request.text();
-
-  let event: Stripe.Event;
-
   try {
-    event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
-  } catch (error) {
-    console.error("Stripe webhook signature verification failed:", error);
+    const stripe = getStripeClient();
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const signature = request.headers.get("stripe-signature");
 
-    return NextResponse.json(
-      { error: "Invalid webhook signature." },
-      { status: 400 },
+    if (!webhookSecret) {
+      console.error("STRIPE_WEBHOOK_SECRET is not configured.");
+
+      return NextResponse.json(
+        { error: "Webhook is not configured." },
+        { status: 500 },
+      );
+    }
+
+    if (!signature) {
+      return NextResponse.json(
+        { error: "Missing Stripe signature." },
+        { status: 400 },
+      );
+    }
+
+    // Stripe signature verification requires the unmodified request body.
+    const payload = await request.text();
+
+    let event: Stripe.Event;
+
+    try {
+      event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+    } catch (error) {
+      console.error("Stripe webhook signature verification failed:", error);
+
+      return NextResponse.json(
+        { error: "Invalid webhook signature." },
+        { status: 400 },
+      );
+    }
+
+    const supabaseAdmin = createSupabaseAdminClient();
+
+    // Atomically claim this event so concurrent deliveries cannot
+    // process the same event at the same time.
+    const { data: claimStatus, error: claimError } = await supabaseAdmin.rpc(
+      "claim_stripe_webhook_event",
+      {
+        p_event_id: event.id,
+        p_event_type: event.type,
+      },
     );
-  }
 
-  const supabaseAdmin = createSupabaseAdminClient();
+    if (claimError) {
+      throw claimError;
+    }
 
-  try {
-    // Record the event before processing it.
-    const { error: insertError } = await supabaseAdmin
-      .from("stripe_webhook_events")
-      .insert({
-        stripe_event_id: event.id,
-        event_type: event.type,
+    if (claimStatus === "processed") {
+      return NextResponse.json({
+        received: true,
+        duplicate: true,
       });
-
-    if (insertError && insertError.code !== "23505") {
-      throw insertError;
     }
 
-    if (insertError?.code === "23505") {
-      // A previously processed event needs no further work.
-      const { data: existing, error: lookupError } = await supabaseAdmin
-        .from("stripe_webhook_events")
-        .select("processed_at")
-        .eq("stripe_event_id", event.id)
-        .single();
-
-      if (lookupError) throw lookupError;
-
-      if (existing.processed_at) {
-        return NextResponse.json({ received: true });
-      }
-
-      // If processing previously failed, continue and retry it.
+    if (claimStatus === "busy") {
+      // Another request currently owns the processing lease.
+      // Return 500 so Stripe retries instead of acknowledging prematurely.
+      return NextResponse.json(
+        { error: "Webhook event is currently being processed." },
+        { status: 500 },
+      );
     }
 
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
+    if (claimStatus !== "claimed") {
+      throw new Error(
+        `Unexpected webhook claim status: ${String(claimStatus)}`,
+      );
+    }
 
-        const subscriptionId =
-          typeof session.subscription === "string"
-            ? session.subscription
-            : session.subscription?.id;
+    try {
+      switch (event.type) {
+        case "checkout.session.completed": {
+          const session = event.data.object as Stripe.Checkout.Session;
 
-        if (subscriptionId) {
-          const subscription =
-            await stripe.subscriptions.retrieve(subscriptionId);
+          const subscriptionId =
+            typeof session.subscription === "string"
+              ? session.subscription
+              : session.subscription?.id;
 
-          await syncSubscription(
-            subscription,
-            session.metadata?.supabase_user_id ?? session.client_reference_id,
-          );
+          if (subscriptionId) {
+            const subscription =
+              await stripe.subscriptions.retrieve(subscriptionId);
+
+            await syncSubscription(
+              subscription,
+              session.metadata?.supabase_user_id ?? session.client_reference_id,
+            );
+          }
+
+          break;
         }
 
-        break;
+        case "customer.subscription.created":
+        case "customer.subscription.updated":
+        case "customer.subscription.deleted": {
+          const subscription = event.data.object as Stripe.Subscription;
+
+          await syncSubscription(subscription);
+          break;
+        }
+
+        default:
+          // Other events are acknowledged but do not change billing state.
+          break;
       }
 
-      case "customer.subscription.created":
-      case "customer.subscription.updated":
-      case "customer.subscription.deleted": {
-        const subscription = event.data.object as Stripe.Subscription;
+      // Only mark the event processed after all handling succeeds.
+      const { error: updateError } = await supabaseAdmin
+        .from("stripe_webhook_events")
+        .update({
+          processed_at: new Date().toISOString(),
+          processing_started_at: null,
+          last_error: null,
+        })
+        .eq("stripe_event_id", event.id);
 
-        await syncSubscription(subscription);
-        break;
+      if (updateError) throw updateError;
+
+      return NextResponse.json({ received: true });
+    } catch (error) {
+      console.error("Stripe webhook processing failed:", error);
+
+      // Release the lease so Stripe's retry can claim the event immediately.
+      const errorMessage =
+        error instanceof Error
+          ? error.message.slice(0, 2000)
+          : "Unknown webhook processing error.";
+
+      const { error: releaseError } = await supabaseAdmin
+        .from("stripe_webhook_events")
+        .update({
+          processing_started_at: null,
+          last_error: errorMessage,
+        })
+        .eq("stripe_event_id", event.id);
+
+      if (releaseError) {
+        console.error(
+          "Could not release Stripe webhook processing lease:",
+          releaseError,
+        );
       }
 
-      default:
-        // Other events are acknowledged but do not change billing state.
-        break;
+      return NextResponse.json(
+        { error: "Webhook processing failed." },
+        { status: 500 },
+      );
     }
-
-    // Mark the event processed only after successful handling.
-    const { error: updateError } = await supabaseAdmin
-      .from("stripe_webhook_events")
-      .update({ processed_at: new Date().toISOString() })
-      .eq("stripe_event_id", event.id);
-
-    if (updateError) throw updateError;
-
-    return NextResponse.json({ received: true });
   } catch (error) {
-    console.error("Stripe webhook processing failed:", error);
+    console.error("Stripe webhook request failed:", error);
 
-    // A 500 response tells Stripe to retry delivery.
     return NextResponse.json(
       { error: "Webhook processing failed." },
       { status: 500 },
