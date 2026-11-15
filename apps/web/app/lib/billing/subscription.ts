@@ -9,6 +9,7 @@ export type UserSubscription = {
   currentPeriodStart: string | null;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
+  cancelAt: string | null;
   trialEnd: string | null;
 };
 
@@ -26,6 +27,7 @@ export const getCurrentSubscription =
           current_period_start,
           current_period_end,
           cancel_at_period_end,
+          cancel_at,
           trial_end
         `,
       )
@@ -50,6 +52,7 @@ export const getCurrentSubscription =
       currentPeriodStart: data.current_period_start,
       currentPeriodEnd: data.current_period_end,
       cancelAtPeriodEnd: data.cancel_at_period_end,
+      cancelAt: data.cancel_at,
       trialEnd: data.trial_end,
     };
   };

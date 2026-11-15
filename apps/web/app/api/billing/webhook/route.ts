@@ -60,6 +60,7 @@ const syncSubscription = async (
       current_period_start: toIsoDate(subscriptionItem.current_period_start),
       current_period_end: toIsoDate(subscriptionItem.current_period_end),
       cancel_at_period_end: subscription.cancel_at_period_end,
+      cancel_at: toIsoDate(subscription.cancel_at),
       trial_end: toIsoDate(subscription.trial_end),
       updated_at: new Date().toISOString(),
     },
@@ -173,7 +174,12 @@ export const POST = async (request: Request) => {
         case "customer.subscription.created":
         case "customer.subscription.updated":
         case "customer.subscription.deleted": {
-          const subscription = event.data.object as Stripe.Subscription;
+          const eventSubscription = event.data.object as Stripe.Subscription;
+
+          // Retrieve the latest state instead of trusting the event snapshot.
+          const subscription = await stripe.subscriptions.retrieve(
+            eventSubscription.id,
+          );
 
           await syncSubscription(subscription);
           break;
