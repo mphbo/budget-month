@@ -300,19 +300,18 @@ export const AccountList = ({
       }}
     >
       <Stack spacing={3}>
-        {canLinkInstitutions && (
-          <>
-            <LinkedInstitutions
-              disabled={isSaving}
-              institutions={linkedInstitutions}
-              onAccountsLinked={addLinkedAccounts}
-              onBalancesRefreshed={applyLinkedBalances}
-              onInstitutionsChange={setLinkedInstitutions}
-              onUnlinked={detachInstitution}
-            />
-            <Divider />
-          </>
-        )}
+        <>
+          <LinkedInstitutions
+            disabled={isSaving}
+            institutions={linkedInstitutions}
+            onAccountsLinked={addLinkedAccounts}
+            onBalancesRefreshed={applyLinkedBalances}
+            onInstitutionsChange={setLinkedInstitutions}
+            onUnlinked={detachInstitution}
+            canLinkInstitutions={canLinkInstitutions}
+          />
+          <Divider />
+        </>
         {error && <Alert severity="error">{error}</Alert>}
         <Box
           sx={{

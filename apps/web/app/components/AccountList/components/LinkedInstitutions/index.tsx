@@ -1,7 +1,6 @@
 "use client";
 
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
-import AddLinkIcon from "@mui/icons-material/AddLink";
 import LinkOffIcon from "@mui/icons-material/LinkOff";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import Alert from "@mui/material/Alert";
@@ -22,8 +21,9 @@ import { getApiErrorMessage, readApiJson } from "../../../../lib/api-response";
 import type {
   LinkedAccountBalance,
   LinkedInstitution,
-} from "../../../../lib/linked-institution-types";
+} from "@/app/lib/linked-institution-types";
 import { DisconnectInstitutionDialog } from "./components/DisconnectInstitutionDialog";
+import { ConnectInstitutionButtons } from "./components/ConnectInstitutionButtons";
 
 type LinkSession =
   | { mode: "connect"; token: string }
@@ -53,6 +53,7 @@ export const LinkedInstitutions = ({
   onAccountsLinked,
   onBalancesRefreshed,
   onUnlinked,
+  canLinkInstitutions,
 }: {
   disabled: boolean;
   institutions: LinkedInstitution[];
@@ -62,6 +63,7 @@ export const LinkedInstitutions = ({
   onAccountsLinked: (accounts: Account[]) => void;
   onBalancesRefreshed: (balances: LinkedAccountBalance[]) => void;
   onUnlinked: (institutionId: string) => void;
+  canLinkInstitutions: boolean;
 }) => {
   const [linkSession, setLinkSession] = useState<LinkSession | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -171,17 +173,6 @@ export const LinkedInstitutions = ({
     }
   };
 
-  const refreshAll = async () => {
-    for (const institution of institutions) {
-      if (!(await refreshInstitution(institution.id))) {
-        return;
-      }
-    }
-    if (institutions.length > 1) {
-      setMessage("All balances updated.");
-    }
-  };
-
   const completeLink = async (publicToken: string, session: LinkSession) => {
     if (session.mode === "reconnect") {
       await refreshInstitution(session.institutionId);
@@ -249,37 +240,15 @@ export const LinkedInstitutions = ({
 
   return (
     <Stack spacing={2}>
-      <Box
-        sx={{
-          alignItems: "center",
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 3,
-          justifyContent: "space-between",
-        }}
-      >
-        <Typography variant="h5">Connected institutions</Typography>
-        <Box sx={{ display: "flex", gap: 1 }}>
-          {institutions.length > 0 && (
-            <Button
-              disabled={isBusy}
-              onClick={() => void refreshAll()}
-              startIcon={<RefreshIcon />}
-              variant="outlined"
-            >
-              Refresh balances
-            </Button>
-          )}
-          <Button
-            disabled={isBusy}
-            onClick={() => void startLink()}
-            startIcon={<AddLinkIcon />}
-            variant="contained"
-          >
-            {isConnecting ? "Connecting..." : "Connect institution"}
-          </Button>
-        </Box>
-      </Box>
+      <ConnectInstitutionButtons
+        institutions={institutions}
+        refreshInstitution={refreshInstitution}
+        canLinkInstitutions={canLinkInstitutions}
+        setMessage={setMessage}
+        isBusy={isBusy}
+        startLink={startLink}
+        isConnecting={isConnecting}
+      />
       {error && <Alert severity="error">{error}</Alert>}
       {message && <Alert severity="success">{message}</Alert>}
       {institutions.length === 0 ? (
