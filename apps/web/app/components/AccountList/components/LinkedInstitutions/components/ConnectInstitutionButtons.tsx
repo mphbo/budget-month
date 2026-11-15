@@ -28,7 +28,7 @@ export const ConnectInstitutionButtons = ({
   startLink: (institutionId?: string | undefined) => Promise<void>;
   isConnecting: boolean;
 }) => {
-  const { openUpgradeDialog, closeUpgradeDialog } = useUpgradeDialog();
+  const { openUpgradeDialog } = useUpgradeDialog();
 
   const refreshAll = async () => {
     for (const institution of institutions) {

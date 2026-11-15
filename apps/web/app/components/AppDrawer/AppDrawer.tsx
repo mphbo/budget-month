@@ -160,10 +160,10 @@ export const AppDrawer = ({
               variant="text"
               onClick={() => setOpen(false)}
               component={Link}
-              href="/settings/password"
+              href="/settings/account"
               sx={{ mt: 0 }}
             >
-              Change Password
+              Account Settings
             </Button>
           </List>
         </Box>

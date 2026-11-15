@@ -7,11 +7,11 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import {
-  Box,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
+  Paper,
   Radio,
 } from "@mui/material";
 import { AccountBalance, Sync, TrendingUp } from "@mui/icons-material";
@@ -81,9 +81,8 @@ export const UpgradeDialog = ({
 
   return (
     <Dialog fullWidth maxWidth="md" onClose={onClose} open={open}>
-      <Box
+      <Paper
         sx={{
-          bgcolor: "background.paper",
           p: { xs: "10px 0", sm: "20px", md: "30px 20px" },
         }}
       >
@@ -143,7 +142,7 @@ export const UpgradeDialog = ({
             Upgrade
           </Button>
         </DialogActions>
-      </Box>
+      </Paper>
     </Dialog>
   );
 };
