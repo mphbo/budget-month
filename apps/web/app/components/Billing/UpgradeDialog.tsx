@@ -35,7 +35,7 @@ const listItems = [
     primary: "See the bigger picture",
     secondary:
       "Bring your financial accounts together to better understand your spending and budget",
-    icon: <AccountBalance sx={{ mr: 3 }} />,
+    icon: <TrendingUp sx={{ mr: 3 }} />,
   },
 ];
 
