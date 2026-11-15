@@ -125,8 +125,8 @@ export const UpgradeDialog = ({
             </ListItem>
           </List>
           <List>
-            {listItems.map((listItem) => (
-              <ListItem>
+            {listItems.map((listItem, index) => (
+              <ListItem key={index}>
                 <ListItemIcon>{listItem.icon}</ListItemIcon>
                 <ListItemText
                   primary={listItem.primary}

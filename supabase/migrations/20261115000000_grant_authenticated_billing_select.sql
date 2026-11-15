@@ -1,0 +1,1 @@
+GRANT SELECT ON public.billing_subscriptions TO authenticated;

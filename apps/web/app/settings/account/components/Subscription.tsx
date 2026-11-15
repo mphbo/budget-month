@@ -11,8 +11,13 @@ import {
 } from "@mui/material";
 import { Edit, Email } from "@mui/icons-material";
 import { useUpgradeDialog } from "@/app/components/Billing/useUpgradeDialog";
+import { UserSubscription } from "@/app/lib/billing/subscription";
 
-export const Subscription = () => {
+export const Subscription = ({
+  subscription,
+}: {
+  subscription: UserSubscription | null;
+}) => {
   const { openUpgradeDialog } = useUpgradeDialog();
   return (
     <Paper sx={{ width: "100%", padding: 2 }} square={false} elevation={4}>
@@ -21,7 +26,9 @@ export const Subscription = () => {
       </Typography>
       <Divider sx={{ my: "20px" }} />
       <Typography variant="h4" sx={{ mb: "15px", fontSize: "30px" }}>
-        Budget Month Free
+        {subscription?.status === "active"
+          ? "Budget Month Pro"
+          : "BudgetMonth Free"}
       </Typography>
       <Typography sx={{ mb: "10px" }}>
         Want access to all of Budget Months features?
