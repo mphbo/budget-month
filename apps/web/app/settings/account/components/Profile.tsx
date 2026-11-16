@@ -15,11 +15,24 @@ export const Profile = () => (
     elevation={4}
   >
     <Box sx={{ display: "flex", alignItems: "center", gap: "20px" }}>
-      <Avatar variant="rounded" sx={{ width: "100px", height: "100px" }}>
+      <Paper
+        sx={{
+          width: "100px",
+          height: "100px",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          borderRadius: "8px",
+          border: "0.1px solid #6d6d6d",
+          mt: "4px",
+        }}
+        elevation={10}
+        variant="outlined"
+      >
         Logan
-      </Avatar>
+      </Paper>
     </Box>
-    <Divider sx={{ my: "30px " }} />
+    <Divider sx={{ my: "20px " }} />
     <Box
       sx={{
         display: "flex",
