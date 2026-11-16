@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import {
+  Alert,
+  ButtonGroup,
   List,
   ListItem,
   ListItemIcon,
@@ -46,11 +48,33 @@ export const UpgradeDialog = ({
   open: boolean;
   onClose: () => void;
 }) => {
+  const checkoutInProgress = useRef(false);
+  const checkoutAttempt = useRef<{
+    plan: Plan;
+    requestId: string;
+  }>(null);
   const [plan, setPlan] = useState<Plan>("monthly");
   const [loadingPlan, setLoadingPlan] = useState<Plan | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const handleCheckout = async (plan: Plan) => {
-    setLoadingPlan(plan);
+
+  const handleCheckout = async (selectedPlan: Plan) => {
+    // Synchronously prevent duplicate submissions.
+    if (checkoutInProgress.current) return;
+
+    checkoutInProgress.current = true;
+
+    // Reuse the request ID when retrying the same plan.
+    if (
+      !checkoutAttempt.current ||
+      checkoutAttempt.current.plan !== selectedPlan
+    ) {
+      checkoutAttempt.current = {
+        plan: selectedPlan,
+        requestId: crypto.randomUUID(),
+      };
+    }
+
+    setLoadingPlan(selectedPlan);
     setError(null);
 
     try {
@@ -59,7 +83,10 @@ export const UpgradeDialog = ({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({
+          plan: selectedPlan,
+          requestId: checkoutAttempt.current.requestId,
+        }),
       });
 
       const data = await response.json();
@@ -75,6 +102,8 @@ export const UpgradeDialog = ({
       window.location.assign(data.url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      checkoutInProgress.current = false;
       setLoadingPlan(null);
     }
   };
@@ -109,7 +138,10 @@ export const UpgradeDialog = ({
               }}
               onClick={() => setPlan("monthly")}
             >
-              <Radio checked={plan === "monthly"} />
+              <Radio
+                checked={plan === "monthly"}
+                disabled={loadingPlan !== null}
+              />
               <ListItemText primary="Monthly" secondary="$4.99 CAD/month" />
             </ListItem>
             <ListItem
@@ -120,7 +152,10 @@ export const UpgradeDialog = ({
               }}
               onClick={() => setPlan("annual")}
             >
-              <Radio checked={plan === "annual"} />
+              <Radio
+                checked={plan === "annual"}
+                disabled={loadingPlan !== null}
+              />
               <ListItemText primary="Yearly" secondary="$39.99 CAD/month" />
             </ListItem>
           </List>
@@ -136,11 +171,28 @@ export const UpgradeDialog = ({
             ))}
           </List>
         </DialogContent>
-        <DialogActions sx={{ p: 2, pt: 0 }}>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button onClick={() => handleCheckout(plan)} variant="contained">
-            Upgrade
-          </Button>
+        <DialogActions
+          sx={{
+            p: 3,
+            pt: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: "20px",
+          }}
+        >
+          {error && <Alert severity="error">{error}</Alert>}
+          <ButtonGroup>
+            <Button onClick={onClose} disabled={loadingPlan !== null}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => handleCheckout(plan)}
+              variant="contained"
+              disabled={loadingPlan !== null}
+            >
+              {loadingPlan !== null ? "Redirecting..." : "Upgrade"}
+            </Button>
+          </ButtonGroup>
         </DialogActions>
       </Paper>
     </Dialog>
