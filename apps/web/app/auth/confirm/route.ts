@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { createSupabaseServerClient } from "../../lib/supabase/server";
+import { createSupabaseServerClient } from "@/app/lib/supabase/server";
+import { syncStripeCustomerEmail } from "@/app/lib/billing/customer";
 
 export const GET = async (request: NextRequest) => {
   const tokenHash = request.nextUrl.searchParams.get("token_hash");
@@ -32,6 +33,26 @@ export const GET = async (request: NextRequest) => {
       if (error) {
         console.error("Email confirmation verification failed", error);
       } else {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) {
+          console.error(
+            "Could not retrieve confirmed user for Stripe email synchronization:",
+            userError,
+          );
+        } else if (user?.email) {
+          try {
+            await syncStripeCustomerEmail(user.id, user.email);
+          } catch (stripeSyncError) {
+            console.error(
+              "Stripe customer email synchronization failed:",
+              stripeSyncError,
+            );
+          }
+        }
         return NextResponse.redirect(new URL(nextPath, request.url));
       }
     } catch (callbackError) {
