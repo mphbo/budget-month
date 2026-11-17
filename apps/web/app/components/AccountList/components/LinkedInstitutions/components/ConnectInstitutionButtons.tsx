@@ -4,10 +4,7 @@ import { Box, Typography } from "@mui/material";
 import AddLinkIcon from "@mui/icons-material/AddLink";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import Button from "@mui/material/Button";
-import type {
-  LinkedAccountBalance,
-  LinkedInstitution,
-} from "@/app/lib/linked-institution-types";
+import type { LinkedInstitution } from "@/app/lib/linked-institution-types";
 
 import { Dispatch, SetStateAction, useState } from "react";
 
@@ -73,9 +70,6 @@ export const ConnectInstitutionButtons = ({
             {isConnecting ? "Connecting..." : "Connect institution"}
           </Button>
         </Box>
-        <Button variant="contained" color="primary" onClick={openUpgradeDialog}>
-          Upgrade to Pro
-        </Button>
       </Box>
     </div>
   );

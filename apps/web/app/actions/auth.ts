@@ -90,6 +90,11 @@ export const signUp = async (
   });
 
   if (error) {
+    console.error("Supabase signup failed:", {
+      message: error.message,
+      status: error.status,
+      code: error.code,
+    });
     return {
       error: "Could not create an account. Check the email and try again.",
     };

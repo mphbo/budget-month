@@ -1,5 +1,8 @@
 "use client";
-
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import Chip from "@mui/material/Chip";
+import Paper from "@mui/material/Paper";
+import { useUpgradeDialog } from "@/app/components/Billing/useUpgradeDialog";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import LinkOffIcon from "@mui/icons-material/LinkOff";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -73,6 +76,8 @@ export const LinkedInstitutions = ({
   const [unlinkTarget, setUnlinkTarget] = useState<LinkedInstitution | null>(
     null,
   );
+  const { openUpgradeDialog } = useUpgradeDialog();
+
   const isBusy = disabled || isConnecting || busyId !== null;
 
   const upsertInstitution = (institution: LinkedInstitution) =>
@@ -237,6 +242,48 @@ export const LinkedInstitutions = ({
       open();
     }
   }, [linkSession, ready, open]);
+
+  console.log({ canLinkInstitutions });
+
+  if (!canLinkInstitutions) {
+    return (
+      <Paper variant="outlined" sx={{ p: 2 }}>
+        <Stack spacing={2}>
+          <Box
+            sx={{
+              alignItems: "center",
+              display: "flex",
+              justifyContent: "space-between",
+            }}
+          >
+            <Typography variant="h5">Connected institutions</Typography>
+            <Chip
+              color="primary"
+              icon={<LockOutlinedIcon />}
+              label="PRO"
+              size="small"
+              variant="outlined"
+            />
+          </Box>
+
+          <Typography color="text.secondary">
+            Automatically connect your bank accounts and keep your balances
+            synchronized with Budget Month. Available with Pro.
+          </Typography>
+
+          <Box>
+            <Button
+              onClick={openUpgradeDialog}
+              startIcon={<LockOutlinedIcon />}
+              variant="contained"
+            >
+              Upgrade to Pro
+            </Button>
+          </Box>
+        </Stack>
+      </Paper>
+    );
+  }
 
   return (
     <Stack spacing={2}>
