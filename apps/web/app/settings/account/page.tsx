@@ -6,10 +6,22 @@ import { getCurrentSubscription } from "@/app/lib/billing/subscription";
 import { connection } from "next/server";
 import { Loading } from "@/app/components/Loading";
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { createSupabaseServerClient } from "@/app/lib/supabase/server";
 
 const AccountContent = async () => {
   await connection();
+  const supabase = await createSupabaseServerClient();
   const subscription = await getCurrentSubscription();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect("/login");
+  }
 
   console.log({ subscription });
   return (
@@ -17,7 +29,14 @@ const AccountContent = async () => {
       <Typography variant="h4" sx={{ my: "40px" }}>
         Account Settings
       </Typography>
-      <Profile />
+      <Profile
+        fullName={
+          typeof user.user_metadata?.full_name === "string"
+            ? user.user_metadata.full_name
+            : ""
+        }
+        email={user.email ?? ""}
+      />
       <Subscription subscription={subscription} />
       {/* <Typography>
         Choose a new password with at least 8 characters, one uppercase letter,

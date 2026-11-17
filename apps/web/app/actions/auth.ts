@@ -204,3 +204,86 @@ export const signOut = async () => {
 
   redirect("/login");
 };
+
+export type ProfileFormState = {
+  error?: string;
+  success?: string;
+  emailChangePending?: boolean;
+};
+
+export const updateProfile = async (
+  _previousState: ProfileFormState,
+  formData: FormData,
+): Promise<ProfileFormState> => {
+  const fullName = formData.get("fullName");
+  const email = formData.get("email");
+
+  if (
+    typeof fullName !== "string" ||
+    fullName.trim().length === 0 ||
+    fullName.trim().length > 80
+  ) {
+    return { error: "Enter a name between 1 and 80 characters." };
+  }
+
+  if (
+    typeof email !== "string" ||
+    email.trim().length > 254 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+  ) {
+    return { error: "Enter a valid email address." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !userData.user) {
+    return { error: "Your session has expired. Please sign in again." };
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const currentEmail = userData.user.email?.toLowerCase();
+
+  // Update the user's display name.
+  const { error: nameError } = await supabase.auth.updateUser({
+    data: {
+      ...userData.user.user_metadata,
+      full_name: fullName.trim(),
+    },
+  });
+
+  if (nameError) {
+    return { error: "Could not update your name. Please try again." };
+  }
+
+  // Only initiate an email change when the address is different.
+  if (normalizedEmail !== currentEmail) {
+    const { error: emailError } = await supabase.auth.updateUser(
+      { email: normalizedEmail },
+      {
+        emailRedirectTo: `${getSiteOrigin()}/auth/confirm?next=/settings/account`,
+      },
+    );
+
+    if (emailError) {
+      console.error("Supabase email update failed:", {
+        message: emailError.message,
+        status: emailError.status,
+        code: emailError.code,
+      });
+
+      return {
+        error: `Your name was updated, but email change failed: ${emailError.message}`,
+      };
+    }
+
+    return {
+      success:
+        "Your name was updated. Check your new email address for a confirmation link.",
+      emailChangePending: true,
+    };
+  }
+
+  return { success: "Your profile was updated successfully." };
+};

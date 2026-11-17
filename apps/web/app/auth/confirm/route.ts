@@ -6,19 +6,27 @@ export const GET = async (request: NextRequest) => {
   const code = request.nextUrl.searchParams.get("code");
   const type = request.nextUrl.searchParams.get("type");
   const requestedNext = request.nextUrl.searchParams.get("next");
-  const nextPath =
-    requestedNext === "/settings/password" || type === "recovery"
-      ? "/settings/password"
-      : "/";
 
-  if (code || (tokenHash && (type === "email" || type === "recovery"))) {
+  const nextPath =
+    type === "recovery" || requestedNext === "/settings/password"
+      ? "/settings/password"
+      : type === "email_change" || requestedNext === "/settings/account"
+        ? "/settings/account"
+        : "/";
+
+  if (
+    code ||
+    (tokenHash &&
+      (type === "email" || type === "email_change" || type === "recovery"))
+  ) {
     try {
       const supabase = await createSupabaseServerClient();
+
       const { error } = code
         ? await supabase.auth.exchangeCodeForSession(code)
         : await supabase.auth.verifyOtp({
             token_hash: tokenHash as string,
-            type: type as "email" | "recovery",
+            type: type as "email" | "email_change" | "recovery",
           });
 
       if (error) {
