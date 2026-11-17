@@ -154,12 +154,88 @@ export const POST = async (request: Request) => {
 
     const stripe = getStripeClient();
 
+    // Independently verify Stripe has no existing subscription.
+    // This protects against duplicate subscriptions if webhooks are delayed
+    // or have temporarily failed.
+
+    let stripeSubscriptions;
+
+    try {
+      const result = await stripe.subscriptions.list({
+        customer: customerId,
+        status: "all",
+        limit: 100,
+      });
+
+      if (result.has_more) {
+        return NextResponse.json(
+          { error: "Could not verify your subscription. Please try again." },
+          { status: 503 },
+        );
+      }
+
+      stripeSubscriptions = result.data;
+    } catch (error) {
+      console.error("Could not verify Stripe subscriptions:", error);
+
+      return NextResponse.json(
+        { error: "Could not verify your subscription. Please try again." },
+        { status: 503 },
+      );
+    }
+
+    const existingStripeSubscription = stripeSubscriptions.find(
+      (subscription) =>
+        [
+          "active",
+          "trialing",
+          "past_due",
+          "unpaid",
+          "incomplete",
+          "paused",
+        ].includes(subscription.status),
+    );
+
+    if (existingStripeSubscription) {
+      return NextResponse.json(
+        {
+          error:
+            "You already have a subscription. Manage it from your account.",
+          code: "SUBSCRIPTION_EXISTS",
+        },
+        { status: 409 },
+      );
+    }
+
     // Look for an existing open Checkout Session for this customer.
-    const { data: openSessions } = await stripe.checkout.sessions.list({
-      customer: customerId,
-      status: "open",
-      limit: 100,
-    });
+
+    let openSessions;
+
+    try {
+      const result = await stripe.checkout.sessions.list({
+        customer: customerId,
+        status: "open",
+        limit: 100,
+      });
+
+      if (result.has_more) {
+        return NextResponse.json(
+          {
+            error: "Could not verify your checkout sessions. Please try again.",
+          },
+          { status: 503 },
+        );
+      }
+
+      openSessions = result.data;
+    } catch (error) {
+      console.error("Could not retrieve Stripe Checkout Sessions:", error);
+
+      return NextResponse.json(
+        { error: "Could not verify your checkout sessions. Please try again." },
+        { status: 503 },
+      );
+    }
 
     const customerSessions = openSessions.filter(
       (existingSession) =>

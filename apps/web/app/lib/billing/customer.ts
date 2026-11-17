@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { createSupabaseAdminClient } from "../supabase/admin";
 import { getStripeClient } from "../stripe";
 
@@ -7,8 +8,8 @@ export const getOrCreateStripeCustomer = async (
   email?: string | null,
 ) => {
   const supabaseAdmin = createSupabaseAdminClient();
+  const stripe = getStripeClient();
 
-  // Check whether this user already has a Stripe customer.
   const { data: existing, error: lookupError } = await supabaseAdmin
     .from("billing_customers")
     .select("stripe_customer_id")
@@ -20,22 +21,39 @@ export const getOrCreateStripeCustomer = async (
   }
 
   if (existing) {
-    return existing.stripe_customer_id;
+    const customer = await stripe.customers.retrieve(
+      existing.stripe_customer_id,
+    );
+
+    if (!customer.deleted) {
+      return customer.id;
+    }
+
+    // Remove only the mapping to the deleted Stripe customer.
+    const { error: deleteError } = await supabaseAdmin
+      .from("billing_customers")
+      .delete()
+      .eq("user_id", userId)
+      .eq("stripe_customer_id", existing.stripe_customer_id);
+
+    if (deleteError) {
+      throw deleteError;
+    }
   }
 
-  // Create a Stripe customer if one doesn't exist.
-  const customerParams = {
-    metadata: {
-      supabase_user_id: userId,
+  // Create a replacement Stripe customer.
+  const customer = await stripe.customers.create(
+    {
+      metadata: {
+        supabase_user_id: userId,
+      },
+      ...(email ? { email } : {}),
     },
-    ...(email ? { email } : {}),
-  };
+    {
+      idempotencyKey: `budget-month-customer-${userId}-${randomUUID()}`,
+    },
+  );
 
-  const customer = await getStripeClient().customers.create(customerParams, {
-    idempotencyKey: `budget-month-customer-${userId}`,
-  });
-
-  // Save the relationship between Supabase and Stripe.
   const { data: inserted, error: insertError } = await supabaseAdmin
     .from("billing_customers")
     .insert({
@@ -49,7 +67,7 @@ export const getOrCreateStripeCustomer = async (
     return inserted.stripe_customer_id;
   }
 
-  // Handle concurrent requests that may have created the mapping.
+  // Handle a concurrent request that created the mapping first.
   if (insertError?.code === "23505") {
     const { data: concurrent, error: concurrentError } = await supabaseAdmin
       .from("billing_customers")
