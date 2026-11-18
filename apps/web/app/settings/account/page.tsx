@@ -41,8 +41,8 @@ const AccountContent = async () => {
       {/* <Typography>
         Choose a new password with at least 8 characters, one uppercase letter,
         and one symbol.
-      </Typography> */}
-      {/* <UpdatePasswordForm /> */}
+      </Typography>
+      <UpdatePasswordForm /> */}
     </Container>
   );
 };

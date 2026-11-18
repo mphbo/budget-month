@@ -110,7 +110,7 @@ export const Subscription = ({ subscription }: SubscriptionProps) => {
           review your payment details.
         </Alert>
       ) : (
-        <Typography sx={{ mb: 2 }}>
+        <Typography sx={{ mb: "20px" }}>
           Upgrade to access all of Budget Month's premium features.
         </Typography>
       )}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Alert,
   Box,
   Button,
   Divider,
@@ -113,7 +114,7 @@ export const Profile = ({ fullName, email }: ProfileProps) => {
                 display: "flex",
                 alignItems: "center",
                 gap: "20px",
-                mb: "30px",
+                mb: "10.5px",
                 flexWrap: "wrap",
               }}
             >
@@ -159,7 +160,7 @@ export const Profile = ({ fullName, email }: ProfileProps) => {
             }}
           >
             <Button type="submit" disabled={pending} variant="outlined">
-              {pending ? "Saving..." : "Save"}
+              {pending ? "Saving..." : "Save Changes"}
             </Button>
 
             <Button type="button" onClick={handleCancel} disabled={pending}>
@@ -175,7 +176,7 @@ export const Profile = ({ fullName, email }: ProfileProps) => {
                 display: "flex",
                 alignItems: "center",
                 gap: "20px",
-                mb: "30px",
+                mb: "20px",
                 flexWrap: "wrap",
               }}
             >
@@ -191,7 +192,7 @@ export const Profile = ({ fullName, email }: ProfileProps) => {
                 alignItems: "center",
                 gap: "20px",
                 flexWrap: "wrap",
-                mb: "15px",
+                mb: "20px",
               }}
             >
               <Typography variant="h6">Email:</Typography>
@@ -202,8 +203,8 @@ export const Profile = ({ fullName, email }: ProfileProps) => {
           <Box
             sx={{
               display: "flex",
-              alignSelf: "flex-start",
               alignItems: "center",
+              justifyContent: { xs: "flex-end", md: "flex-start" },
               gap: 1,
             }}
           >
@@ -214,17 +215,10 @@ export const Profile = ({ fullName, email }: ProfileProps) => {
         </>
       )}
 
-      {state.error && (
-        <Typography color="error" sx={{ mt: 2 }}>
-          {state.error}
-        </Typography>
-      )}
-
-      {state.success && (
-        <Typography color="success.main" sx={{ mt: 2 }}>
-          {state.success}
-        </Typography>
-      )}
+      <Box sx={{ mt: "20px" }}>
+        {state.error && <Alert severity="error">{state.error}</Alert>}
+        {state.success && <Alert severity="success">{state.success}</Alert>}
+      </Box>
     </Paper>
   );
 };
