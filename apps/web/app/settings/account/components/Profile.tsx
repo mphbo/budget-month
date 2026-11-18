@@ -204,7 +204,6 @@ export const Profile = ({ fullName, email }: ProfileProps) => {
             sx={{
               display: "flex",
               alignItems: "center",
-              justifyContent: { xs: "flex-end", md: "flex-start" },
               gap: 1,
             }}
           >
