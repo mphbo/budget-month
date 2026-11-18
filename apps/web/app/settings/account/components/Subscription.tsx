@@ -93,8 +93,8 @@ export const Subscription = ({ subscription }: SubscriptionProps) => {
 
           {isCancellationScheduled && cancellationDate && (
             <Alert severity="warning" sx={{ mb: 2 }}>
-              Your subscription is scheduled to end on {periodEnd}. You retain
-              access until then.
+              Your subscription is scheduled to end on {cancellationDate}. You
+              retain access until then.
             </Alert>
           )}
 

@@ -217,7 +217,6 @@ export type ProfileFormState = {
 };
 
 export const updateProfile = async (
-  _previousState: ProfileFormState,
   formData: FormData,
 ): Promise<ProfileFormState> => {
   const fullName = formData.get("fullName");

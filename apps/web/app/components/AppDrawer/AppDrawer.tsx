@@ -57,7 +57,7 @@ export const AppDrawer = ({
               component={Link}
               href="/"
               onClick={() => setOpen(false)}
-              sx={{ pt: 2, pb: 2, pl: 4 }}
+              sx={{ p: 2, textAlign: "center" }}
             >
               <ListItemText
                 primary="Budget Month"
@@ -149,22 +149,28 @@ export const AppDrawer = ({
                 </Box>
               ))
             )}
-            <Box component="form" action={signOut} sx={{ p: 2, mt: 2 }}>
-              <Button fullWidth type="submit" variant="outlined">
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+                p: "20px 10px",
+              }}
+            >
+              <Button
+                fullWidth
+                type="submit"
+                onClick={() => setOpen(false)}
+                component={Link}
+                href="/settings/account"
+                variant="outlined"
+              >
+                Account Settings
+              </Button>
+              <Button fullWidth type="submit" onClick={signOut}>
                 Sign out
               </Button>
             </Box>
-            <Button
-              fullWidth
-              type="submit"
-              variant="text"
-              onClick={() => setOpen(false)}
-              component={Link}
-              href="/settings/account"
-              sx={{ mt: 0 }}
-            >
-              Account Settings
-            </Button>
           </List>
         </Box>
       </Drawer>
