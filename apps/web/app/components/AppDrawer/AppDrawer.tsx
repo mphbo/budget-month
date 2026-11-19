@@ -57,11 +57,12 @@ export const AppDrawer = ({
               component={Link}
               href="/"
               onClick={() => setOpen(false)}
-              sx={{ p: 2, textAlign: "center" }}
+              sx={{ p: "20px", textAlign: "center" }}
             >
               <ListItemText
                 primary="Budget Month"
-                slotProps={{ primary: { sx: { fontSize: "25px" } } }}
+                sx={{ m: 0 }}
+                slotProps={{ primary: { sx: { fontSize: "32px" } } }}
               />
             </ListItemButton>
             <Divider />
@@ -109,7 +110,10 @@ export const AppDrawer = ({
                       }}
                     >
                       <EditCalendarIcon />
-                      <ListItemText primary={month.name} />
+                      <ListItemText
+                        primary={month.name}
+                        slotProps={{ primary: { sx: { fontSize: "20px" } } }}
+                      />
                     </ListItemButton>
                     <Box
                       sx={{
@@ -164,10 +168,11 @@ export const AppDrawer = ({
                 component={Link}
                 href="/settings/account"
                 variant="outlined"
+                size="large"
               >
                 Account Settings
               </Button>
-              <Button fullWidth type="submit" onClick={signOut}>
+              <Button fullWidth type="submit" onClick={signOut} size="large">
                 Sign out
               </Button>
             </Box>
