@@ -1,5 +1,5 @@
 import { Container, Typography } from "@mui/material";
-import { UpdatePasswordForm } from "../password/components/UpdatePasswordForm";
+import { UpdatePasswordForm } from "./components/Profile/components/PasswordForm";
 import { Profile } from "./components/Profile";
 import { Subscription } from "./components/Subscription";
 import { getCurrentSubscription } from "@/app/lib/billing/subscription";
@@ -38,11 +38,6 @@ const AccountContent = async () => {
         email={user.email ?? ""}
       />
       <Subscription subscription={subscription} />
-      {/* <Typography>
-        Choose a new password with at least 8 characters, one uppercase letter,
-        and one symbol.
-      </Typography>
-      <UpdatePasswordForm /> */}
     </Container>
   );
 };
