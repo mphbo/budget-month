@@ -68,24 +68,53 @@ const syncSubscription = async (
   });
 
   if (error) throw error;
+
   return userId;
 };
 
-const disconnectPlaidItemsIfNoActiveSubscription = async (userId: string) => {
-  const supabaseAdmin = createSupabaseAdminClient();
+const disconnectPlaidItemsIfNoActiveSubscription = async (
+  stripe: Stripe,
+  userId: string,
+  customerId: string,
+  ensureLock: () => Promise<void>,
+) => {
+  let startingAfter: string | undefined;
 
-  const { data: activeSubscription, error } = await supabaseAdmin
-    .from("billing_subscriptions")
-    .select("stripe_subscription_id")
-    .eq("user_id", userId)
-    .in("status", ["active", "trialing"])
-    .limit(1)
-    .maybeSingle();
+  while (true) {
+    await ensureLock();
 
-  if (error) throw error;
+    const subscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      status: "all",
+      limit: 100,
+      ...(startingAfter ? { starting_after: startingAfter } : {}),
+    });
 
-  // Another qualifying subscription still exists.
-  if (activeSubscription) return;
+    const hasActiveSubscription = subscriptions.data.some(
+      (subscription) =>
+        subscription.status === "active" || subscription.status === "trialing",
+    );
+
+    if (hasActiveSubscription) {
+      return;
+    }
+
+    if (!subscriptions.has_more) {
+      break;
+    }
+
+    const lastSubscription = subscriptions.data[subscriptions.data.length - 1];
+
+    if (!lastSubscription) {
+      throw new Error(
+        `Stripe returned an empty subscription page for customer ${customerId}.`,
+      );
+    }
+
+    startingAfter = lastSubscription.id;
+  }
+
+  await ensureLock();
 
   await disconnectPlaidItemsForUser(userId);
 };
@@ -115,8 +144,9 @@ const withSubscriptionLock = async <T>(
 
   let renewalError: Error | null = null;
   let renewalInProgress = false;
+  let renewalPromise: Promise<void> | null = null;
 
-  const ensureLock = async () => {
+  const renewLock = async () => {
     if (renewalError) throw renewalError;
 
     const { data: renewed, error } = await supabaseAdmin.rpc(
@@ -138,32 +168,53 @@ const withSubscriptionLock = async <T>(
     }
   };
 
-  const renewalInterval = setInterval(async () => {
+  const ensureLock = async () => {
+    if (renewalPromise) {
+      await renewalPromise;
+    } else {
+      await renewLock();
+    }
+
+    if (renewalError) throw renewalError;
+  };
+
+  const renewalInterval = setInterval(() => {
     if (renewalInProgress || renewalError) return;
 
     renewalInProgress = true;
 
-    try {
-      await ensureLock();
-    } catch (error) {
-      renewalError =
-        error instanceof Error
-          ? error
-          : new Error("Unknown subscription lock renewal error.");
+    renewalPromise = (async () => {
+      try {
+        await renewLock();
+      } catch (error) {
+        renewalError =
+          error instanceof Error
+            ? error
+            : new Error("Unknown subscription lock renewal error.");
 
-      console.error(
-        `Subscription lock renewal failed for ${subscriptionId}:`,
-        renewalError,
-      );
-    } finally {
-      renewalInProgress = false;
-    }
+        console.error(
+          `Subscription lock renewal failed for ${subscriptionId}:`,
+          renewalError,
+        );
+      } finally {
+        renewalInProgress = false;
+        renewalPromise = null;
+      }
+    })();
   }, 60_000);
 
   try {
-    return await callback(lockToken, ensureLock);
+    const result = await callback(lockToken, ensureLock);
+
+    await ensureLock();
+
+    return result;
   } finally {
     clearInterval(renewalInterval);
+
+    if (renewalPromise) {
+      await renewalPromise;
+    }
 
     const { error: releaseError } = await supabaseAdmin.rpc(
       "release_stripe_subscription_lock",
@@ -207,8 +258,9 @@ const withUserLock = async <T>(
 
   let renewalError: Error | null = null;
   let renewalInProgress = false;
+  let renewalPromise: Promise<void> | null = null;
 
-  const ensureLock = async () => {
+  const renewLock = async () => {
     if (renewalError) throw renewalError;
 
     const { data: renewed, error } = await supabaseAdmin.rpc(
@@ -230,29 +282,50 @@ const withUserLock = async <T>(
     }
   };
 
-  const renewalInterval = setInterval(async () => {
+  const ensureLock = async () => {
+    if (renewalPromise) {
+      await renewalPromise;
+    } else {
+      await renewLock();
+    }
+
+    if (renewalError) throw renewalError;
+  };
+
+  const renewalInterval = setInterval(() => {
     if (renewalInProgress || renewalError) return;
 
     renewalInProgress = true;
 
-    try {
-      await ensureLock();
-    } catch (error) {
-      renewalError =
-        error instanceof Error
-          ? error
-          : new Error("Unknown user lock renewal error.");
+    renewalPromise = (async () => {
+      try {
+        await renewLock();
+      } catch (error) {
+        renewalError =
+          error instanceof Error
+            ? error
+            : new Error("Unknown user lock renewal error.");
 
-      console.error(`User lock renewal failed for ${userId}:`, renewalError);
-    } finally {
-      renewalInProgress = false;
-    }
+        console.error(`User lock renewal failed for ${userId}:`, renewalError);
+      } finally {
+        renewalInProgress = false;
+        renewalPromise = null;
+      }
+    })();
   }, 60_000);
 
   try {
-    return await callback(ensureLock);
+    const result = await callback(ensureLock);
+
+    await ensureLock();
+
+    return result;
   } finally {
     clearInterval(renewalInterval);
+
+    if (renewalPromise) {
+      await renewalPromise;
+    }
 
     const { error: releaseError } = await supabaseAdmin.rpc(
       "release_stripe_user_lock",
@@ -264,6 +337,89 @@ const withUserLock = async <T>(
 
     if (releaseError) {
       console.error(`Failed to release user lock for ${userId}:`, releaseError);
+    }
+  }
+};
+
+const withWebhookEventLease = async <T>(
+  eventId: string,
+  processingToken: string,
+  callback: () => Promise<T>,
+): Promise<T> => {
+  const supabaseAdmin = createSupabaseAdminClient();
+
+  let renewalError: Error | null = null;
+  let renewalInProgress = false;
+  let renewalPromise: Promise<void> | null = null;
+
+  const renewLease = async () => {
+    if (renewalError) throw renewalError;
+
+    const { data: renewed, error } = await supabaseAdmin.rpc(
+      "renew_stripe_webhook_event_claim",
+      {
+        p_event_id: eventId,
+        p_processing_token: processingToken,
+      },
+    );
+
+    if (error) {
+      renewalError = error;
+      throw error;
+    }
+
+    if (!renewed) {
+      renewalError = new Error(`Lost webhook event claim for ${eventId}.`);
+      throw renewalError;
+    }
+  };
+
+  const ensureLease = async () => {
+    if (renewalPromise) {
+      await renewalPromise;
+    } else {
+      await renewLease();
+    }
+
+    if (renewalError) throw renewalError;
+  };
+
+  const renewalInterval = setInterval(() => {
+    if (renewalInProgress || renewalError) return;
+
+    renewalInProgress = true;
+
+    renewalPromise = (async () => {
+      try {
+        await renewLease();
+      } catch (error) {
+        renewalError =
+          error instanceof Error
+            ? error
+            : new Error("Unknown webhook event lease renewal error.");
+
+        console.error(
+          `Webhook event lease renewal failed for ${eventId}:`,
+          renewalError,
+        );
+      } finally {
+        renewalInProgress = false;
+        renewalPromise = null;
+      }
+    })();
+  }, 60_000);
+
+  try {
+    const result = await callback();
+
+    await ensureLease();
+
+    return result;
+  } finally {
+    clearInterval(renewalInterval);
+
+    if (renewalPromise) {
+      await renewalPromise;
     }
   }
 };
@@ -310,11 +466,14 @@ export const POST = async (request: Request) => {
 
     // Atomically claim this event so concurrent deliveries cannot
     // process the same event at the same time.
+    const processingToken = randomUUID();
+
     const { data: claimStatus, error: claimError } = await supabaseAdmin.rpc(
       "claim_stripe_webhook_event",
       {
         p_event_id: event.id,
         p_event_type: event.type,
+        p_processing_token: processingToken,
       },
     );
 
@@ -345,81 +504,112 @@ export const POST = async (request: Request) => {
     }
 
     try {
-      switch (event.type) {
-        case "checkout.session.completed": {
-          const session = event.data.object as Stripe.Checkout.Session;
+      await withWebhookEventLease(event.id, processingToken, async () => {
+        switch (event.type) {
+          case "checkout.session.completed": {
+            const session = event.data.object as Stripe.Checkout.Session;
 
-          const subscriptionId =
-            typeof session.subscription === "string"
-              ? session.subscription
-              : session.subscription?.id;
+            const subscriptionId =
+              typeof session.subscription === "string"
+                ? session.subscription
+                : session.subscription?.id;
 
-          if (subscriptionId) {
-            await withSubscriptionLock(
-              subscriptionId,
+            if (subscriptionId) {
+              const { userId, customerId } = await withSubscriptionLock(
+                subscriptionId,
+                async (lockToken, ensureLock) => {
+                  const subscription =
+                    await stripe.subscriptions.retrieve(subscriptionId);
+
+                  await ensureLock();
+
+                  const userId = await syncSubscription(
+                    subscription,
+                    lockToken,
+                    session.metadata?.supabase_user_id ??
+                      session.client_reference_id,
+                  );
+
+                  const customerId =
+                    typeof subscription.customer === "string"
+                      ? subscription.customer
+                      : subscription.customer.id;
+
+                  return { userId, customerId };
+                },
+              );
+
+              await withUserLock(userId, async (ensureLock) => {
+                await disconnectPlaidItemsIfNoActiveSubscription(
+                  stripe,
+                  userId,
+                  customerId,
+                  ensureLock,
+                );
+              });
+            }
+
+            break;
+          }
+
+          case "customer.subscription.created":
+          case "customer.subscription.updated":
+          case "customer.subscription.deleted": {
+            const eventSubscription = event.data.object as Stripe.Subscription;
+
+            const { userId, customerId } = await withSubscriptionLock(
+              eventSubscription.id,
               async (lockToken, ensureLock) => {
-                const subscription =
-                  await stripe.subscriptions.retrieve(subscriptionId);
+                const subscription = await stripe.subscriptions.retrieve(
+                  eventSubscription.id,
+                );
 
                 await ensureLock();
 
-                await syncSubscription(
-                  subscription,
-                  lockToken,
-                  session.metadata?.supabase_user_id ??
-                    session.client_reference_id,
-                );
+                const userId = await syncSubscription(subscription, lockToken);
+
+                const customerId =
+                  typeof subscription.customer === "string"
+                    ? subscription.customer
+                    : subscription.customer.id;
+
+                return { userId, customerId };
               },
             );
+
+            await withUserLock(userId, async (ensureLock) => {
+              await disconnectPlaidItemsIfNoActiveSubscription(
+                stripe,
+                userId,
+                customerId,
+                ensureLock,
+              );
+            });
+
+            break;
           }
 
-          break;
+          default:
+            break;
         }
+      });
 
-        case "customer.subscription.created":
-        case "customer.subscription.updated":
-        case "customer.subscription.deleted": {
-          const eventSubscription = event.data.object as Stripe.Subscription;
+      // Complete the event only after processing and lease verification succeed.
+      const { data: completed, error: completeError } = await supabaseAdmin.rpc(
+        "complete_stripe_webhook_event",
+        {
+          p_event_id: event.id,
+          p_processing_token: processingToken,
+        },
+      );
 
-          const { userId, status } = await withSubscriptionLock(
-            eventSubscription.id,
-            async (lockToken, ensureLock) => {
-              // Retrieve the latest state only after acquiring the lock.
-              const subscription = await stripe.subscriptions.retrieve(
-                eventSubscription.id,
-              );
+      if (completeError) throw completeError;
 
-              await ensureLock();
-
-              const userId = await syncSubscription(subscription, lockToken);
-
-              return {
-                userId,
-                status: subscription.status,
-              };
-            },
-          );
-
-          await disconnectPlaidItemsIfNoActiveSubscription(userId);
-
-          break;
-        }
-
-        default:
-          break;
+      if (!completed) {
+        throw new Error(
+          `Could not complete webhook event ${event.id}: claim lost.`,
+        );
       }
-
-      // Only mark the event processed after all handling succeeds.
-      const { error: updateError } = await supabaseAdmin
-        .from("stripe_webhook_events")
-        .update({
-          processed_at: new Date().toISOString(),
-          processing_started_at: null,
-          last_error: null,
-        })
-        .eq("stripe_event_id", event.id);
-
-      if (updateError) throw updateError;
 
       return NextResponse.json({ received: true });
     } catch (error) {
@@ -431,18 +621,23 @@ export const POST = async (request: Request) => {
           ? error.message.slice(0, 2000)
           : "Unknown webhook processing error.";
 
-      const { error: releaseError } = await supabaseAdmin
-        .from("stripe_webhook_events")
-        .update({
-          processing_started_at: null,
-          last_error: errorMessage,
-        })
-        .eq("stripe_event_id", event.id);
+      const { data: released, error: releaseError } = await supabaseAdmin.rpc(
+        "release_stripe_webhook_event_claim",
+        {
+          p_event_id: event.id,
+          p_processing_token: processingToken,
+          p_error: errorMessage,
+        },
+      );
 
       if (releaseError) {
         console.error(
           "Could not release Stripe webhook processing lease:",
           releaseError,
+        );
+      } else if (!released) {
+        console.warn(
+          `Stripe webhook event ${event.id} was not released because this request no longer owns its claim.`,
         );
       }
 
