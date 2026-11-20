@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
+import { randomUUID } from "node:crypto";
 import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
 import { getStripeClient } from "../../../lib/stripe";
 
@@ -8,6 +9,7 @@ const toIsoDate = (timestamp?: number | null) =>
 
 const syncSubscription = async (
   subscription: Stripe.Subscription,
+  lockToken: string,
   fallbackUserId?: string | null,
 ) => {
   const supabaseAdmin = createSupabaseAdminClient();
@@ -51,25 +53,112 @@ const syncSubscription = async (
     );
   }
 
-  const { error } = await supabaseAdmin.from("billing_subscriptions").upsert(
+  const { error } = await supabaseAdmin.rpc("sync_stripe_subscription", {
+    p_subscription_id: subscription.id,
+    p_lock_token: lockToken,
+    p_user_id: userId,
+    p_price_id: subscriptionItem.price.id,
+    p_status: subscription.status,
+    p_current_period_start: toIsoDate(subscriptionItem.current_period_start),
+    p_current_period_end: toIsoDate(subscriptionItem.current_period_end),
+    p_cancel_at_period_end: subscription.cancel_at_period_end,
+    p_cancel_at: toIsoDate(subscription.cancel_at),
+    p_trial_end: toIsoDate(subscription.trial_end),
+  });
+
+  if (error) throw error;
+};
+
+const withSubscriptionLock = async <T>(
+  subscriptionId: string,
+  callback: (lockToken: string, ensureLock: () => Promise<void>) => Promise<T>,
+): Promise<T> => {
+  const supabaseAdmin = createSupabaseAdminClient();
+  const lockToken = randomUUID();
+
+  const { data: acquired, error: acquireError } = await supabaseAdmin.rpc(
+    "acquire_stripe_subscription_lock",
     {
-      stripe_subscription_id: subscription.id,
-      user_id: userId,
-      stripe_price_id: subscriptionItem.price.id,
-      status: subscription.status,
-      current_period_start: toIsoDate(subscriptionItem.current_period_start),
-      current_period_end: toIsoDate(subscriptionItem.current_period_end),
-      cancel_at_period_end: subscription.cancel_at_period_end,
-      cancel_at: toIsoDate(subscription.cancel_at),
-      trial_end: toIsoDate(subscription.trial_end),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      onConflict: "stripe_subscription_id",
+      p_subscription_id: subscriptionId,
+      p_lock_token: lockToken,
     },
   );
 
-  if (error) throw error;
+  if (acquireError) throw acquireError;
+
+  if (!acquired) {
+    throw new Error(
+      `Subscription ${subscriptionId} is currently being processed.`,
+    );
+  }
+
+  let renewalError: Error | null = null;
+  let renewalInProgress = false;
+
+  const ensureLock = async () => {
+    if (renewalError) throw renewalError;
+
+    const { data: renewed, error } = await supabaseAdmin.rpc(
+      "renew_stripe_subscription_lock",
+      {
+        p_subscription_id: subscriptionId,
+        p_lock_token: lockToken,
+      },
+    );
+
+    if (error) {
+      renewalError = error;
+      throw error;
+    }
+
+    if (!renewed) {
+      renewalError = new Error(`Lost subscription lock for ${subscriptionId}.`);
+      throw renewalError;
+    }
+  };
+
+  const renewalInterval = setInterval(async () => {
+    if (renewalInProgress || renewalError) return;
+
+    renewalInProgress = true;
+
+    try {
+      await ensureLock();
+    } catch (error) {
+      renewalError =
+        error instanceof Error
+          ? error
+          : new Error("Unknown subscription lock renewal error.");
+
+      console.error(
+        `Subscription lock renewal failed for ${subscriptionId}:`,
+        renewalError,
+      );
+    } finally {
+      renewalInProgress = false;
+    }
+  }, 60_000);
+
+  try {
+    return await callback(lockToken, ensureLock);
+  } finally {
+    clearInterval(renewalInterval);
+
+    const { error: releaseError } = await supabaseAdmin.rpc(
+      "release_stripe_subscription_lock",
+      {
+        p_subscription_id: subscriptionId,
+        p_lock_token: lockToken,
+      },
+    );
+
+    if (releaseError) {
+      console.error(
+        `Failed to release subscription lock for ${subscriptionId}:`,
+        releaseError,
+      );
+    }
+  }
 };
 
 export const POST = async (request: Request) => {
@@ -159,12 +248,21 @@ export const POST = async (request: Request) => {
               : session.subscription?.id;
 
           if (subscriptionId) {
-            const subscription =
-              await stripe.subscriptions.retrieve(subscriptionId);
+            await withSubscriptionLock(
+              subscriptionId,
+              async (lockToken, ensureLock) => {
+                const subscription =
+                  await stripe.subscriptions.retrieve(subscriptionId);
 
-            await syncSubscription(
-              subscription,
-              session.metadata?.supabase_user_id ?? session.client_reference_id,
+                await ensureLock();
+
+                await syncSubscription(
+                  subscription,
+                  lockToken,
+                  session.metadata?.supabase_user_id ??
+                    session.client_reference_id,
+                );
+              },
             );
           }
 
@@ -176,17 +274,24 @@ export const POST = async (request: Request) => {
         case "customer.subscription.deleted": {
           const eventSubscription = event.data.object as Stripe.Subscription;
 
-          // Retrieve the latest state instead of trusting the event snapshot.
-          const subscription = await stripe.subscriptions.retrieve(
+          await withSubscriptionLock(
             eventSubscription.id,
+            async (lockToken, ensureLock) => {
+              // Retrieve the latest state only after acquiring the lock.
+              const subscription = await stripe.subscriptions.retrieve(
+                eventSubscription.id,
+              );
+
+              await ensureLock();
+
+              await syncSubscription(subscription, lockToken);
+            },
           );
 
-          await syncSubscription(subscription);
           break;
         }
 
         default:
-          // Other events are acknowledged but do not change billing state.
           break;
       }
 
