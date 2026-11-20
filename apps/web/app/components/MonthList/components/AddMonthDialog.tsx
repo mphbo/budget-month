@@ -7,13 +7,13 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getApiErrorMessage, readApiJson } from "../lib/api-response";
+import { getApiErrorMessage, readApiJson } from "../../../lib/api-response";
 import type {
   MonthDirection,
   MonthOption,
   NextMonthOption,
   PreviousMonthOption,
-} from "../lib/month-types";
+} from "../../../lib/month-types";
 
 type CreateMonthResponse = {
   month: MonthOption;

@@ -3,13 +3,14 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { AccountList } from "./components/AccountList";
 import { EquityHistoryChart } from "./components/EquityHistoryChart";
-import { MonthList } from "./components/MonthList";
 import { Loading } from "./components/Loading";
+import { MonthList } from "./components/MonthList";
 import {
   getAccounts,
   getEquityHistory,
   getMonthNavigationData,
 } from "./lib/budgets";
+import { getLinkedInstitutionsAccess } from "./lib/linked-institutions";
 import styles from "./page.module.css";
 
 const Home = () => {
@@ -27,10 +28,12 @@ const HomeContent = async () => {
     { months, currentMonthSlug, nextMonth, previousMonth, deletableMonths },
     accounts,
     equityHistory,
+    linkedInstitutionsAccess,
   ] = await Promise.all([
     getMonthNavigationData(),
     getAccounts(),
     getEquityHistory(),
+    getLinkedInstitutionsAccess(),
   ]);
 
   return (
@@ -65,7 +68,11 @@ const HomeContent = async () => {
               flexWrap: { xs: "wrap", lg: "nowrap" },
             }}
           >
-            <AccountList accounts={accounts} />
+            <AccountList
+              accounts={accounts}
+              canLinkInstitutions={linkedInstitutionsAccess.enabled}
+              linkedInstitutions={linkedInstitutionsAccess.institutions}
+            />
             <MonthList
               initialMonths={months}
               currentMonthSlug={currentMonthSlug}

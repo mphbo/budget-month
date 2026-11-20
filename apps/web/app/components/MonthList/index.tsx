@@ -21,14 +21,14 @@ import ListItemText from "@mui/material/ListItemText";
 import Tooltip from "@mui/material/Tooltip";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getApiErrorMessage } from "../lib/api-response";
+import { getApiErrorMessage } from "@/app/lib/api-response";
 import type {
   MonthDirection,
   MonthOption,
   NextMonthOption,
   PreviousMonthOption,
-} from "../lib/month-types";
-import { AddMonthDialog } from "./AddMonthDialog";
+} from "@/app/lib/month-types";
+import { AddMonthDialog } from "./components/AddMonthDialog";
 
 type MonthNavigationResponse = {
   months: MonthOption[];

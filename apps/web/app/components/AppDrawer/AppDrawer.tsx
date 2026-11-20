@@ -19,8 +19,8 @@ import Tooltip from "@mui/material/Tooltip";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { signOut } from "../actions/auth";
-import type { MonthOption } from "../lib/month-types";
+import { signOut } from "@/app/actions/auth";
+import type { MonthOption } from "@/app/lib/month-types";
 import styles from "./AppDrawer.module.css";
 
 export const AppDrawer = ({
@@ -57,11 +57,12 @@ export const AppDrawer = ({
               component={Link}
               href="/"
               onClick={() => setOpen(false)}
-              sx={{ pt: 2, pb: 2, pl: 4 }}
+              sx={{ p: "20px", textAlign: "center" }}
             >
               <ListItemText
                 primary="Budget Month"
-                slotProps={{ primary: { sx: { fontSize: "25px" } } }}
+                sx={{ m: 0 }}
+                slotProps={{ primary: { sx: { fontSize: "32px" } } }}
               />
             </ListItemButton>
             <Divider />
@@ -109,7 +110,10 @@ export const AppDrawer = ({
                       }}
                     >
                       <EditCalendarIcon />
-                      <ListItemText primary={month.name} />
+                      <ListItemText
+                        primary={month.name}
+                        slotProps={{ primary: { sx: { fontSize: "20px" } } }}
+                      />
                     </ListItemButton>
                     <Box
                       sx={{
@@ -149,22 +153,29 @@ export const AppDrawer = ({
                 </Box>
               ))
             )}
-            <Box component="form" action={signOut} sx={{ p: 2, mt: 2 }}>
-              <Button fullWidth type="submit" variant="outlined">
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+                p: "20px 10px",
+              }}
+            >
+              <Button
+                fullWidth
+                type="submit"
+                onClick={() => setOpen(false)}
+                component={Link}
+                href="/settings/account"
+                variant="outlined"
+                size="large"
+              >
+                Account Settings
+              </Button>
+              <Button fullWidth type="submit" onClick={signOut} size="large">
                 Sign out
               </Button>
             </Box>
-            <Button
-              fullWidth
-              type="submit"
-              variant="text"
-              onClick={() => setOpen(false)}
-              component={Link}
-              href="/settings/password"
-              sx={{ mt: 0 }}
-            >
-              Change Password
-            </Button>
           </List>
         </Box>
       </Drawer>
