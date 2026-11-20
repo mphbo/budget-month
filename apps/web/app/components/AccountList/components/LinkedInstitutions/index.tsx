@@ -38,6 +38,9 @@ const lastSyncedFormatter = new Intl.DateTimeFormat(undefined, {
 });
 
 const describeInstitution = (institution: LinkedInstitution) => {
+  if (institution.status === "disconnected") {
+    return "Disconnected = connect again to resume syncing";
+  }
   if (institution.status === "login_required") {
     return "Login expired — reconnect to update balances";
   }
@@ -245,57 +248,36 @@ export const LinkedInstitutions = ({
 
   console.log({ canLinkInstitutions });
 
-  if (!canLinkInstitutions) {
-    return (
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Stack spacing={2}>
-          <Box
-            sx={{
-              alignItems: "center",
-              display: "flex",
-              justifyContent: "space-between",
-            }}
-          >
-            <Typography variant="h5">Connected institutions</Typography>
-            <Chip
-              color="primary"
-              icon={<LockOutlinedIcon />}
-              label="PRO"
-              size="small"
-              variant="outlined"
-            />
-          </Box>
-
-          <Typography color="text.secondary">
-            Automatically connect your bank accounts and keep your balances
-            synchronized with Budget Month. Available with Pro.
-          </Typography>
-
-          <Box>
-            <Button
-              onClick={openUpgradeDialog}
-              startIcon={<LockOutlinedIcon />}
-              variant="contained"
-            >
-              Upgrade to Pro
-            </Button>
-          </Box>
-        </Stack>
-      </Paper>
-    );
-  }
-
   return (
     <Stack spacing={2}>
-      <ConnectInstitutionButtons
-        institutions={institutions}
-        refreshInstitution={refreshInstitution}
-        canLinkInstitutions={canLinkInstitutions}
-        setMessage={setMessage}
-        isBusy={isBusy}
-        startLink={startLink}
-        isConnecting={isConnecting}
-      />
+      {canLinkInstitutions ? (
+        <ConnectInstitutionButtons
+          institutions={institutions}
+          refreshInstitution={refreshInstitution}
+          canLinkInstitutions={canLinkInstitutions}
+          setMessage={setMessage}
+          isBusy={isBusy}
+          startLink={startLink}
+          isConnecting={isConnecting}
+        />
+      ) : (
+        <Paper variant="outlined" sx={{ p: 2 }}>
+          <Typography variant="subtitle2">
+            Upgrade to Pro to reconnect institutions
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Your institution history remains available, but reconnecting and
+            refreshing balances requires an active Pro subscription.
+          </Typography>
+          <Button
+            onClick={openUpgradeDialog}
+            variant="contained"
+            sx={{ mt: 1 }}
+          >
+            Upgrade to Pro
+          </Button>
+        </Paper>
+      )}
       {error && <Alert severity="error">{error}</Alert>}
       {message && <Alert severity="success">{message}</Alert>}
       {institutions.length === 0 ? (
@@ -311,41 +293,58 @@ export const LinkedInstitutions = ({
               key={institution.id}
               secondaryAction={
                 <Box sx={{ display: "flex", gap: 0.5 }}>
-                  {institution.status === "login_required" ? (
+                  {institution.status === "disconnected" ? (
                     <Button
                       disabled={isBusy}
-                      onClick={() => void startLink(institution.id)}
+                      onClick={() => void startLink()}
                       size="small"
                       variant="outlined"
                     >
-                      Reconnect
+                      Connect again
                     </Button>
                   ) : (
-                    <Tooltip title={`Refresh ${institution.institutionName}`}>
-                      <span>
-                        <IconButton
-                          aria-label={`Refresh ${institution.institutionName}`}
+                    <>
+                      {institution.status === "login_required" ? (
+                        <Button
                           disabled={isBusy}
-                          onClick={() =>
-                            void refreshInstitution(institution.id)
-                          }
+                          onClick={() => void startLink(institution.id)}
+                          size="small"
+                          variant="outlined"
                         >
-                          <RefreshIcon />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                  )}
-                  <Tooltip title={`Disconnect ${institution.institutionName}`}>
-                    <span>
-                      <IconButton
-                        aria-label={`Disconnect ${institution.institutionName}`}
-                        disabled={isBusy}
-                        onClick={() => setUnlinkTarget(institution)}
+                          Reconnect
+                        </Button>
+                      ) : (
+                        <Tooltip
+                          title={`Refresh ${institution.institutionName}`}
+                        >
+                          <span>
+                            <IconButton
+                              aria-label={`Refresh ${institution.institutionName}`}
+                              disabled={isBusy}
+                              onClick={() =>
+                                void refreshInstitution(institution.id)
+                              }
+                            >
+                              <RefreshIcon />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      )}
+                      <Tooltip
+                        title={`Disconnect ${institution.institutionName}`}
                       >
-                        <LinkOffIcon />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
+                        <span>
+                          <IconButton
+                            aria-label={`Disconnect ${institution.institutionName}`}
+                            disabled={isBusy}
+                            onClick={() => setUnlinkTarget(institution)}
+                          >
+                            <LinkOffIcon />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </>
+                  )}
                 </Box>
               }
               sx={{ py: 1, pr: 12 }}

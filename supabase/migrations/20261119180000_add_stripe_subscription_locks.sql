@@ -4,6 +4,9 @@ CREATE TABLE public.stripe_subscription_locks (
   locked_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE public.stripe_subscription_locks
+ENABLE ROW LEVEL SECURITY;
+
 CREATE OR REPLACE FUNCTION public.acquire_stripe_subscription_lock(
   p_subscription_id TEXT,
   p_lock_token UUID
@@ -11,7 +14,7 @@ CREATE OR REPLACE FUNCTION public.acquire_stripe_subscription_lock(
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
 DECLARE
   acquired BOOLEAN;
@@ -45,7 +48,7 @@ CREATE OR REPLACE FUNCTION public.release_stripe_subscription_lock(
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
 DECLARE
   released BOOLEAN;
@@ -66,7 +69,7 @@ CREATE OR REPLACE FUNCTION public.renew_stripe_subscription_lock(
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
 DECLARE
   renewed BOOLEAN;
@@ -83,7 +86,7 @@ END;
 $$;
 
 REVOKE ALL ON TABLE public.stripe_subscription_locks
-FROM anon, authenticated, service_role;
+FROM PUBLIC, anon, authenticated, service_role;
 
 REVOKE EXECUTE ON FUNCTION
   public.acquire_stripe_subscription_lock(TEXT, UUID)
@@ -124,7 +127,7 @@ CREATE OR REPLACE FUNCTION public.sync_stripe_subscription(
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
 BEGIN
   PERFORM 1

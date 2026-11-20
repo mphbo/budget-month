@@ -164,9 +164,7 @@ export const getLinkedInstitutionsAccess = async (): Promise<{
   institutions: LinkedInstitution[];
 }> => {
   const { supabase, userId } = await getAuthorizedSupabaseClient();
-  if (!(await canUseLinkedInstitutions(userId))) {
-    return { enabled: false, institutions: [] };
-  }
+  const enabled = await canUseLinkedInstitutions(userId);
 
   const { data, error } = await supabase
     .from("plaid_items")
@@ -180,7 +178,7 @@ export const getLinkedInstitutionsAccess = async (): Promise<{
     return { enabled: false, institutions: [] };
   }
 
-  return { enabled: true, institutions: data.map(toLinkedInstitution) };
+  return { enabled, institutions: data.map(toLinkedInstitution) };
 };
 
 export const createLinkToken = async (institutionId?: string) => {

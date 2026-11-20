@@ -27,8 +27,12 @@ export const ConnectInstitutionButtons = ({
 }) => {
   const { openUpgradeDialog } = useUpgradeDialog();
 
+  const refreshableInstitutions = institutions.filter(
+    (institution) => institution.status !== "disconnected",
+  );
+
   const refreshAll = async () => {
-    for (const institution of institutions) {
+    for (const institution of refreshableInstitutions) {
       if (!(await refreshInstitution(institution.id))) {
         return;
       }
@@ -51,7 +55,7 @@ export const ConnectInstitutionButtons = ({
       >
         <Typography variant="h5">Connected institutions</Typography>
         <Box sx={{ display: "flex", gap: 1 }}>
-          {canLinkInstitutions && institutions.length > 0 && (
+          {canLinkInstitutions && refreshableInstitutions.length > 0 && (
             <Button
               disabled={isBusy}
               onClick={() => void refreshAll()}
@@ -61,14 +65,20 @@ export const ConnectInstitutionButtons = ({
               Refresh balances
             </Button>
           )}
-          <Button
-            disabled={isBusy}
-            onClick={() => void startLink()}
-            startIcon={<AddLinkIcon />}
-            variant="contained"
-          >
-            {isConnecting ? "Connecting..." : "Connect institution"}
-          </Button>
+          {canLinkInstitutions ? (
+            <Button
+              disabled={isBusy}
+              onClick={() => void startLink()}
+              startIcon={<AddLinkIcon />}
+              variant="contained"
+            >
+              {isConnecting ? "Connecting..." : "Connect institution"}
+            </Button>
+          ) : (
+            <Button onClick={openUpgradeDialog} variant="contained">
+              Upgrade to Pro
+            </Button>
+          )}
         </Box>
       </Box>
     </div>

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { randomUUID } from "node:crypto";
-import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
-import { getStripeClient } from "../../../lib/stripe";
+import { disconnectPlaidItemsForUser } from "@/app/lib/plaid/disconnect";
+import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
+import { getStripeClient } from "@/app/lib/stripe";
 
 const toIsoDate = (timestamp?: number | null) =>
   timestamp ? new Date(timestamp * 1000).toISOString() : null;
@@ -67,6 +68,26 @@ const syncSubscription = async (
   });
 
   if (error) throw error;
+  return userId;
+};
+
+const disconnectPlaidItemsIfNoActiveSubscription = async (userId: string) => {
+  const supabaseAdmin = createSupabaseAdminClient();
+
+  const { data: activeSubscription, error } = await supabaseAdmin
+    .from("billing_subscriptions")
+    .select("stripe_subscription_id")
+    .eq("user_id", userId)
+    .in("status", ["active", "trialing"])
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  // Another qualifying subscription still exists.
+  if (activeSubscription) return;
+
+  await disconnectPlaidItemsForUser(userId);
 };
 
 const withSubscriptionLock = async <T>(
@@ -274,7 +295,7 @@ export const POST = async (request: Request) => {
         case "customer.subscription.deleted": {
           const eventSubscription = event.data.object as Stripe.Subscription;
 
-          await withSubscriptionLock(
+          const { userId, status } = await withSubscriptionLock(
             eventSubscription.id,
             async (lockToken, ensureLock) => {
               // Retrieve the latest state only after acquiring the lock.
@@ -284,9 +305,16 @@ export const POST = async (request: Request) => {
 
               await ensureLock();
 
-              await syncSubscription(subscription, lockToken);
+              const userId = await syncSubscription(subscription, lockToken);
+
+              return {
+                userId,
+                status: subscription.status,
+              };
             },
           );
+
+          await disconnectPlaidItemsIfNoActiveSubscription(userId);
 
           break;
         }

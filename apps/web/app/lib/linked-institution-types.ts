@@ -1,4 +1,8 @@
-export type LinkedInstitutionStatus = "active" | "login_required" | "error";
+export type LinkedInstitutionStatus =
+  | "active"
+  | "login_required"
+  | "error"
+  | "disconnected";
 
 export type LinkedInstitution = {
   id: string;
