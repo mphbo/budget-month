@@ -292,60 +292,62 @@ export const LinkedInstitutions = ({
               disablePadding
               key={institution.id}
               secondaryAction={
-                <Box sx={{ display: "flex", gap: 0.5 }}>
-                  {institution.status === "disconnected" ? (
-                    <Button
-                      disabled={isBusy}
-                      onClick={() => void startLink()}
-                      size="small"
-                      variant="outlined"
-                    >
-                      Connect again
-                    </Button>
-                  ) : (
-                    <>
-                      {institution.status === "login_required" ? (
-                        <Button
-                          disabled={isBusy}
-                          onClick={() => void startLink(institution.id)}
-                          size="small"
-                          variant="outlined"
-                        >
-                          Reconnect
-                        </Button>
-                      ) : (
+                canLinkInstitutions ? (
+                  <Box sx={{ display: "flex", gap: 0.5 }}>
+                    {institution.status === "disconnected" ? (
+                      <Button
+                        disabled={isBusy}
+                        onClick={() => void startLink()}
+                        size="small"
+                        variant="outlined"
+                      >
+                        Connect again
+                      </Button>
+                    ) : (
+                      <>
+                        {institution.status === "login_required" ? (
+                          <Button
+                            disabled={isBusy}
+                            onClick={() => void startLink(institution.id)}
+                            size="small"
+                            variant="outlined"
+                          >
+                            Reconnect
+                          </Button>
+                        ) : (
+                          <Tooltip
+                            title={`Refresh ${institution.institutionName}`}
+                          >
+                            <span>
+                              <IconButton
+                                aria-label={`Refresh ${institution.institutionName}`}
+                                disabled={isBusy}
+                                onClick={() =>
+                                  void refreshInstitution(institution.id)
+                                }
+                              >
+                                <RefreshIcon />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        )}
                         <Tooltip
-                          title={`Refresh ${institution.institutionName}`}
+                          title={`Disconnect ${institution.institutionName}`}
                         >
                           <span>
                             <IconButton
-                              aria-label={`Refresh ${institution.institutionName}`}
+                              aria-label={`Disconnect ${institution.institutionName}`}
                               disabled={isBusy}
-                              onClick={() =>
-                                void refreshInstitution(institution.id)
-                              }
+                              onClick={() => setUnlinkTarget(institution)}
                             >
-                              <RefreshIcon />
+                              <LinkOffIcon />
                             </IconButton>
                           </span>
                         </Tooltip>
-                      )}
-                      <Tooltip
-                        title={`Disconnect ${institution.institutionName}`}
-                      >
-                        <span>
-                          <IconButton
-                            aria-label={`Disconnect ${institution.institutionName}`}
-                            disabled={isBusy}
-                            onClick={() => setUnlinkTarget(institution)}
-                          >
-                            <LinkOffIcon />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                    </>
-                  )}
-                </Box>
+                      </>
+                    )}
+                  </Box>
+                ) : null
               }
               sx={{ py: 1, pr: 12 }}
             >

@@ -182,6 +182,92 @@ const withSubscriptionLock = async <T>(
   }
 };
 
+const withUserLock = async <T>(
+  userId: string,
+  callback: (ensureLock: () => Promise<void>) => Promise<T>,
+): Promise<T> => {
+  const supabaseAdmin = createSupabaseAdminClient();
+  const lockToken = randomUUID();
+
+  const { data: acquired, error: acquireError } = await supabaseAdmin.rpc(
+    "acquire_stripe_user_lock",
+    {
+      p_user_id: userId,
+      p_lock_token: lockToken,
+    },
+  );
+
+  if (acquireError) throw acquireError;
+
+  if (!acquired) {
+    throw new Error(
+      `Subscription processing is already running for user ${userId}.`,
+    );
+  }
+
+  let renewalError: Error | null = null;
+  let renewalInProgress = false;
+
+  const ensureLock = async () => {
+    if (renewalError) throw renewalError;
+
+    const { data: renewed, error } = await supabaseAdmin.rpc(
+      "renew_stripe_user_lock",
+      {
+        p_user_id: userId,
+        p_lock_token: lockToken,
+      },
+    );
+
+    if (error) {
+      renewalError = error;
+      throw error;
+    }
+
+    if (!renewed) {
+      renewalError = new Error(`Lost user lock for ${userId}.`);
+      throw renewalError;
+    }
+  };
+
+  const renewalInterval = setInterval(async () => {
+    if (renewalInProgress || renewalError) return;
+
+    renewalInProgress = true;
+
+    try {
+      await ensureLock();
+    } catch (error) {
+      renewalError =
+        error instanceof Error
+          ? error
+          : new Error("Unknown user lock renewal error.");
+
+      console.error(`User lock renewal failed for ${userId}:`, renewalError);
+    } finally {
+      renewalInProgress = false;
+    }
+  }, 60_000);
+
+  try {
+    return await callback(ensureLock);
+  } finally {
+    clearInterval(renewalInterval);
+
+    const { error: releaseError } = await supabaseAdmin.rpc(
+      "release_stripe_user_lock",
+      {
+        p_user_id: userId,
+        p_lock_token: lockToken,
+      },
+    );
+
+    if (releaseError) {
+      console.error(`Failed to release user lock for ${userId}:`, releaseError);
+    }
+  }
+};
+
 export const POST = async (request: Request) => {
   try {
     const stripe = getStripeClient();
