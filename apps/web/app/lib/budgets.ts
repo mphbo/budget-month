@@ -174,8 +174,65 @@ export const getMonthNavigationData = cache(async () => {
   };
 });
 
+type EquityHistorySupabase = Awaited<
+  ReturnType<typeof createSupabaseServerClient>
+>;
+
+const getEquityHistoryMonths = async (
+  supabase: EquityHistorySupabase,
+  userId: string,
+) => {
+  const { data, error } = await supabase
+    .from("budget_months")
+    .select("id, month_start")
+    .eq("user_id", userId)
+    .order("month_start", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+};
+
+const getEquityHistoryAccounts = async (
+  supabase: EquityHistorySupabase,
+  userId: string,
+) => {
+  const { data, error } = await supabase
+    .from("account_items")
+    .select("id, account_type, category, amount")
+    .eq("user_id", userId);
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+};
+
+const getHistoricalEquityItems = async (
+  supabase: EquityHistorySupabase,
+  userId: string,
+  monthIds: string[],
+) => {
+  const { data, error } = await supabase
+    .from("budget_items")
+    .select("month_id, account_id, account_type, category, amount")
+    .eq("user_id", userId)
+    .eq("section", "totalEquity")
+    .in("month_id", monthIds);
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+};
+
 export const getEquityHistory = async (): Promise<EquityHistoryPoint[]> => {
   const { supabase, userId } = await getAuthorizedSupabaseClient();
+
   const { data: months, error: monthsError } = await supabase
     .from("budget_months")
     .select("id, month_start")
@@ -185,6 +242,7 @@ export const getEquityHistory = async (): Promise<EquityHistoryPoint[]> => {
   if (monthsError) {
     throw monthsError;
   }
+
   if (months.length === 0) {
     return [];
   }
@@ -207,6 +265,7 @@ export const getEquityHistory = async (): Promise<EquityHistoryPoint[]> => {
       },
     ]),
   );
+
   const { data: equityItems, error: equityItemsError } = await supabase
     .from("budget_items")
     .select("month_id, account_id, account_type, category, amount")
@@ -221,46 +280,73 @@ export const getEquityHistory = async (): Promise<EquityHistoryPoint[]> => {
     throw equityItemsError;
   }
 
-  const categoryValuesByMonth = new Map<string, Record<string, number>>();
+  const valuesByMonth = new Map<
+    string,
+    {
+      assets: Record<string, number>;
+      liabilities: Record<string, number>;
+    }
+  >();
+
   for (const item of equityItems) {
     const account = item.account_id
       ? accountDetails.get(item.account_id)
       : undefined;
+
     const type =
       account?.type ??
       item.account_type ??
       (Number(item.amount) < 0 ? "liability" : "asset");
+
     const category = account?.category ?? item.category ?? "Other";
-    const signedAmount =
-      type === "liability"
-        ? -Math.abs(Number(item.amount))
-        : Math.abs(Number(item.amount));
-    const key = `${type}:${category}`;
-    const categoryValues = categoryValuesByMonth.get(item.month_id) ?? {};
-    categoryValues[key] = (categoryValues[key] ?? 0) + signedAmount;
-    categoryValuesByMonth.set(item.month_id, categoryValues);
+
+    const values = valuesByMonth.get(item.month_id) ?? {
+      assets: {},
+      liabilities: {},
+    };
+
+    if (type === "liability") {
+      values.liabilities[category] =
+        (values.liabilities[category] ?? 0) - Math.abs(Number(item.amount));
+    } else {
+      values.assets[category] =
+        (values.assets[category] ?? 0) + Math.abs(Number(item.amount));
+    }
+
+    valuesByMonth.set(item.month_id, values);
   }
 
   const currentMonth = months.find(
     (month) => month.month_start === currentMonthStart(),
   );
+
   if (currentMonth) {
-    const currentCategoryValues: Record<string, number> = {};
+    const currentValues = {
+      assets: {} as Record<string, number>,
+      liabilities: {} as Record<string, number>,
+    };
+
     for (const account of accounts) {
-      const key = `${account.account_type}:${account.category}`;
-      const signedAmount =
-        account.account_type === "liability"
-          ? -Number(account.amount)
-          : Number(account.amount);
-      currentCategoryValues[key] =
-        (currentCategoryValues[key] ?? 0) + signedAmount;
+      if (account.account_type === "liability") {
+        currentValues.liabilities[account.category] =
+          (currentValues.liabilities[account.category] ?? 0) -
+          Number(account.amount);
+      } else {
+        currentValues.assets[account.category] =
+          (currentValues.assets[account.category] ?? 0) +
+          Number(account.amount);
+      }
     }
-    categoryValuesByMonth.set(currentMonth.id, currentCategoryValues);
+
+    valuesByMonth.set(currentMonth.id, currentValues);
   }
 
   return months.map((month) => ({
     month: monthOption(month.month_start).name,
-    categoryValues: categoryValuesByMonth.get(month.id) ?? {},
+    ...(valuesByMonth.get(month.id) ?? {
+      assets: {},
+      liabilities: {},
+    }),
   }));
 };
 
@@ -632,6 +718,7 @@ export const getMonthBudget = async (
     ? getEquityChanges(budget.totalEquity, previousEquity)
     : [];
 
+  console.log({ accounts });
   return budget;
 };
 
