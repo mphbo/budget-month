@@ -19,12 +19,14 @@ import type { EquityHistoryPoint, MonthOption } from "../lib/month-types";
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
+  notation: "compact",
   maximumFractionDigits: 0,
 });
 
 const exactCurrency = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
+  notation: "compact",
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
@@ -118,6 +120,7 @@ export const EquityChangeChart = ({
 
   const maxLabels = isSmallScreen ? 4 : isMediumScreen ? 8 : 12;
   const labelInterval = Math.ceil(chartData.length / maxLabels);
+  const height = isSmallScreen ? 400 : isMediumScreen ? 500 : 600;
 
   return (
     <Paper
@@ -224,14 +227,16 @@ export const EquityChangeChart = ({
           </Typography>
         ) : (
           <LineChart
-            height={400}
+            height={height}
             dataset={chartData}
-            margin={{ left: 0, right: 40, top: 20, bottom: 90 }}
+            margin={{ left: 0, right: 10, top: 20, bottom: 0 }}
+            colors={["#81c5f8"]}
             series={[
               {
                 dataKey: "equity",
                 label: "Equity",
-                curve: "natural",
+                labelMarkType: "line",
+                curve: "monotoneX",
                 showMark: true,
                 valueFormatter: (value) =>
                   value == null ? "" : exactCurrency.format(value),
@@ -241,7 +246,7 @@ export const EquityChangeChart = ({
               {
                 scaleType: "point",
                 data: chartData.map((point) => point.month),
-                height: 90,
+                height: 45,
                 position: "bottom",
                 valueFormatter: (value: string) => formatMonthLabel(value),
                 tickLabelInterval: (_value: string, index: number) =>
@@ -254,12 +259,16 @@ export const EquityChangeChart = ({
             ]}
             yAxis={[
               {
-                width: 110,
+                width: 70,
                 valueFormatter: (value: number) => currency.format(value),
+                colorMap: {
+                  type: "piecewise",
+                  thresholds: [0],
+                  colors: ["orange", "#81c5f8"],
+                },
               },
             ]}
             grid={{
-              vertical: true,
               horizontal: true,
             }}
           />
