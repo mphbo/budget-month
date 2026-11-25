@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import { getMonthNavigationData } from "../lib/budgets";
 import { createSupabaseServerClient } from "../lib/supabase/server";
-import { AppDrawer } from "./AppDrawer/AppDrawer";
+import { AppDrawer } from "./AppDrawer";
 
 export const AuthNavigation = async () => {
   await connection();

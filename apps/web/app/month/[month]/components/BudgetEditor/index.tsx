@@ -6,7 +6,7 @@ import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import { useRouter } from "next/navigation";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useEffect, useState } from "react";
 import { AddAccountDialog } from "@/app/components/AddAccountDialog";
 import { ResetChanges } from "@/app/components/ResetChanges";
 import type { Account, AccountInput } from "@/app/lib/account-types";
@@ -75,6 +75,7 @@ export const BudgetEditor = ({
   const hasCreatedStagedAccount = stagedAccounts.some(
     (staged) => staged.createdAccount,
   );
+
   const cancelChanges = () => {
     setDraft(savedDraft);
     setStagedAccounts([]);
@@ -83,6 +84,20 @@ export const BudgetEditor = ({
     setIsAddingEquityItem(false);
     setIsProgressDialogOpen(false);
   };
+
+  useEffect(() => {
+    if (isDirty) {
+      return;
+    }
+
+    const updatedBudget = createEditableBudget(budget);
+    const updatedInput = getBudgetSnapshot(toBudgetInput(updatedBudget));
+
+    savedDraftRef.current = updatedBudget;
+    setDraft(updatedBudget);
+    setSavedDraft(updatedBudget);
+    setSavedInput(updatedInput);
+  }, [budget, isDirty]);
 
   useLayoutEffect(
     () => () => {

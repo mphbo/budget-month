@@ -1,8 +1,11 @@
 import Grid from "@mui/material/Grid";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
-import { formatCurrency } from "../../../../../lib/formatting";
-import { EditableBudget } from "../types";
+import { formatCurrency } from "../../../../../../lib/formatting";
+import { EditableBudget } from "../../types";
+import { Box } from "@mui/material";
+import { DonutChart } from "./components/DonutChart";
+import { SummaryChart } from "./components/SummaryChart";
 
 export const CashFlow = ({ draft }: { draft: EditableBudget }) => {
   const incomeTotal = draft.income.reduce((sum, entry) => {
@@ -39,23 +42,34 @@ export const CashFlow = ({ draft }: { draft: EditableBudget }) => {
         p: { xs: 2, sm: 3 },
       }}
     >
-      <Typography sx={{ mb: 2 }} variant="h6">
-        Cash Flow
-      </Typography>
+      <Box>
+        <Typography sx={{ mb: 2 }} variant="h6">
+          Cash Flow
+        </Typography>
+      </Box>
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, sm: 4 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          {draft.income.length > 0 && <DonutChart data={draft.income} />}
           <Typography color="text.secondary" variant="body2">
             Income
           </Typography>
           <Typography variant="h6">{formatCurrency(incomeTotal)}</Typography>
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          {draft.expenses.length > 0 && <DonutChart data={draft.expenses} />}
           <Typography color="text.secondary" variant="body2">
             Expenses
           </Typography>
           <Typography variant="h6">{formatCurrency(expensesTotal)}</Typography>
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
+        <Grid size={{ xs: 12, sm: 12 }}>
+          {draft.income.length === 0 && draft.expenses.length === 0 ? null : (
+            <SummaryChart
+              incomeTotal={incomeTotal}
+              expenseTotal={expensesTotal}
+              isSmall={false}
+            />
+          )}
           <Typography color="text.secondary" variant="body2">
             {differenceLabel}
           </Typography>

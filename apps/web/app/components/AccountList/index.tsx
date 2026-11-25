@@ -102,6 +102,36 @@ export const AccountList = ({
   const isDirty =
     accountSnapshot(draft.map(toAccountInput)) !==
     accountSnapshot(savedAccounts.map(toAccountInput));
+
+  useEffect(() => {
+    const updatedAccounts = accounts.map(toEditableAccount);
+
+    const updatedSnapshot = accountSnapshot(
+      updatedAccounts.map(toAccountInput),
+    );
+
+    const draftSnapshot = accountSnapshot(draft.map(toAccountInput));
+
+    // Preserve local changes until the server returns the saved values.
+    if (isDirty) {
+      if (updatedSnapshot !== draftSnapshot) {
+        return;
+      }
+    } else {
+      const currentSnapshot = accountSnapshot(
+        savedAccountsRef.current.map(toAccountInput),
+      );
+
+      if (updatedSnapshot === currentSnapshot) {
+        return;
+      }
+    }
+
+    savedAccountsRef.current = updatedAccounts;
+    setSavedAccounts(updatedAccounts);
+    setDraft(updatedAccounts);
+  }, [accounts, draft, isDirty]);
+
   const isSectionDirty = (type: AccountType) =>
     accountSnapshot(
       draft.filter((account) => account.type === type).map(toAccountInput),
@@ -276,8 +306,6 @@ export const AccountList = ({
         );
       }
 
-      savedAccountsRef.current = draft.map((account) => ({ ...account }));
-      setSavedAccounts(savedAccountsRef.current);
       setSavedMessage("Account changes saved.");
     } catch (saveError) {
       setError(
