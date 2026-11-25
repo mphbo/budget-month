@@ -16,14 +16,14 @@ import TableSortLabel from "@mui/material/TableSortLabel";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
-import { TotalEquityItemDialog } from "./TotalEquityItemDialog";
+import { TotalEquityItemDialog } from "../TotalEquityItemDialog";
 import { UnsavedChangesIndicator } from "@/app/components/UnsavedChangesIndicator";
 import {
   isFixedAssetCategory,
   LIABILITY_CATEGORIES,
 } from "@/app/lib/account-types";
 import { formatCurrency } from "@/app/lib/formatting";
-import type { EditableBudgetItem } from "./DataTable";
+import type { EditableBudgetItem } from "../DataTable";
 
 type SortColumn = "item" | "amount";
 type SortDirection = "asc" | "desc";
