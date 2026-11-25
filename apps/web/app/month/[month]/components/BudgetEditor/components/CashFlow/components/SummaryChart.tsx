@@ -7,7 +7,7 @@ export const SummaryChart = ({
 }: {
   incomeTotal: number;
   expenseTotal: number;
-  isSmall;
+  isSmall: boolean;
 }) => {
   const isSurplus = incomeTotal > expenseTotal;
   const isDeficit = incomeTotal < expenseTotal;
