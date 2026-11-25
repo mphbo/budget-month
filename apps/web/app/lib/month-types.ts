@@ -46,7 +46,8 @@ export type MonthOption = {
 
 export type EquityHistoryPoint = {
   month: string;
-  categoryValues: Record<string, number>;
+  assets: Record<string, number>;
+  liabilities: Record<string, number>;
 };
 
 export type NextMonthOption = MonthOption & {

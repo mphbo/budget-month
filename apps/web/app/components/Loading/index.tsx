@@ -19,7 +19,7 @@ export const Loading = () => {
         color="secondary"
         size="380px"
         thickness={1.5}
-        sx={{ position: "absolute" }}
+        sx={{ position: "absolute", rotate: "45deg" }}
       />
       <CircularProgress
         aria-label="Loading…"
@@ -33,7 +33,7 @@ export const Loading = () => {
         color="secondary"
         size="250px"
         thickness={0.5}
-        sx={{ position: "absolute" }}
+        sx={{ position: "absolute", rotate: "135deg" }}
       />
       <p className={styles.logo} style={{ fontSize: "25px", color: "white" }}>
         Budget Month

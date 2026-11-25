@@ -2,15 +2,16 @@ import { Box, Container, Typography } from "@mui/material";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { AccountList } from "./components/AccountList";
-import { EquityHistoryChart } from "./components/EquityHistoryChart";
-import { MonthList } from "./components/MonthList";
 import { Loading } from "./components/Loading";
+import { MonthList } from "./components/MonthList";
 import {
   getAccounts,
   getEquityHistory,
   getMonthNavigationData,
 } from "./lib/budgets";
+import { getLinkedInstitutionsAccess } from "./lib/linked-institutions";
 import styles from "./page.module.css";
+import { EquityChangeChart } from "./components/EquityChangeChart";
 
 const Home = () => {
   return (
@@ -27,15 +28,19 @@ const HomeContent = async () => {
     { months, currentMonthSlug, nextMonth, previousMonth, deletableMonths },
     accounts,
     equityHistory,
+    linkedInstitutionsAccess,
   ] = await Promise.all([
     getMonthNavigationData(),
     getAccounts(),
     getEquityHistory(),
+    getLinkedInstitutionsAccess(),
   ]);
+
+  console.log({ equityHistory });
 
   return (
     <div className={styles.page}>
-      <Container sx={{ backgroundColor: "#23272f", p: { xs: "0 0px" } }}>
+      <Container sx={{ backgroundColor: "#23272f", p: { xs: "0 0" } }}>
         <main className={styles.main}>
           <Box sx={{ m: { xs: "0 16px" } }}>
             <Typography variant="h2" sx={{ mb: 3.5 }}>
@@ -46,7 +51,7 @@ const HomeContent = async () => {
               jump into one of your monthly budgets.
             </Typography>
           </Box>
-          <EquityHistoryChart
+          <EquityChangeChart
             accounts={accounts}
             allPoints={equityHistory}
             currentMonth={
@@ -65,7 +70,11 @@ const HomeContent = async () => {
               flexWrap: { xs: "wrap", lg: "nowrap" },
             }}
           >
-            <AccountList accounts={accounts} />
+            <AccountList
+              accounts={accounts}
+              canLinkInstitutions={linkedInstitutionsAccess.enabled}
+              linkedInstitutions={linkedInstitutionsAccess.institutions}
+            />
             <MonthList
               initialMonths={months}
               currentMonthSlug={currentMonthSlug}

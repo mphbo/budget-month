@@ -6,11 +6,11 @@ import FormControlLabel from "@mui/material/FormControlLabel";
 import FormGroup from "@mui/material/FormGroup";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
+import Switch from "@mui/material/Switch";
 import Typography from "@mui/material/Typography";
 import { useEffect, useRef, useState } from "react";
 import type { Account } from "../lib/account-types";
 import type { EquityHistoryPoint, MonthOption } from "../lib/month-types";
-import { Switch } from "@mui/material";
 
 const chartHeight = 400;
 const minimumPlotLeft = 90;
@@ -18,11 +18,13 @@ const plotTop = 16;
 const plotBottom = 336;
 const rightPadding = 24;
 const pointSpacing = 0;
+
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
   maximumFractionDigits: 0,
 });
+
 const exactCurrency = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -54,8 +56,10 @@ export const EquityHistoryChart = ({
   const [points, setPoints] = useState<EquityHistoryPoint[]>(allPoints);
   const [containerWidth, setContainerWidth] = useState(640);
   const [activePointMonth, setActivePointMonth] = useState<string | null>(null);
+
   useEffect(() => {
     const container = chartContainerRef.current;
+
     if (!container) {
       return;
     }
@@ -63,7 +67,9 @@ export const EquityHistoryChart = ({
     const observer = new ResizeObserver(([entry]) => {
       setContainerWidth(Math.max(320, entry.contentRect.width));
     });
+
     observer.observe(container);
+
     return () => observer.disconnect();
   }, []);
 
@@ -76,26 +82,23 @@ export const EquityHistoryChart = ({
       ? allPoints.slice(0, currentMonthIndex + 1)
       : allPoints;
 
-  const isFutureMonths = filteredPoints < allPoints;
+  const isFutureMonths = filteredPoints.length < allPoints.length;
 
   useEffect(() => {
     if (!includeFutureProjections) {
-      isFutureMonths && setPoints(filteredPoints);
+      setPoints(filteredPoints);
     } else {
       setPoints(allPoints);
     }
   }, [includeFutureProjections, allPoints, currentMonth]);
 
-  const categoryKey = (type: Account["type"], category: string) =>
-    `${type}:${category}`;
   const categoriesByType = (["asset", "liability"] as const).map((type) => {
     const currentCategories = accounts
       .filter((account) => account.type === type)
       .map((account) => account.category);
+
     const historicalCategories = points.flatMap((point) =>
-      Object.keys(point.categoryValues)
-        .filter((key) => key.startsWith(`${type}:`))
-        .map((key) => key.slice(type.length + 1)),
+      Object.keys(type === "asset" ? point.assets : point.liabilities),
     );
 
     return {
@@ -103,27 +106,35 @@ export const EquityHistoryChart = ({
       categories: [...new Set([...currentCategories, ...historicalCategories])],
     };
   });
-  const [selectedCategories, setSelectedCategories] = useState(
+
+  const [selectedAssets, setSelectedAssets] = useState(
     () =>
       new Set(
-        categoriesByType.flatMap(({ type, categories }) =>
-          categories.map((category) => categoryKey(type, category)),
-        ),
+        categoriesByType.find(({ type }) => type === "asset")?.categories ?? [],
       ),
   );
-  const availableCategoryKeys = categoriesByType.flatMap(
-    ({ type, categories }) =>
-      categories.map((category) => categoryKey(type, category)),
+
+  const [selectedLiabilities, setSelectedLiabilities] = useState(
+    () =>
+      new Set(
+        categoriesByType.find(({ type }) => type === "liability")?.categories ??
+          [],
+      ),
   );
-  const selectedCategoryKeys = availableCategoryKeys.filter((key) =>
-    selectedCategories.has(key),
-  );
+
+  const selectedCategoryCount = selectedAssets.size + selectedLiabilities.size;
+
   const chartPoints = points.map((point) => ({
     month: point.month,
-    equity: selectedCategoryKeys.reduce(
-      (total, key) => total + (point.categoryValues[key] ?? 0),
-      0,
-    ),
+    equity:
+      [...selectedAssets].reduce(
+        (total, category) => total + (point.assets[category] ?? 0),
+        0,
+      ) +
+      [...selectedLiabilities].reduce(
+        (total, category) => total + (point.liabilities[category] ?? 0),
+        0,
+      ),
   }));
 
   if (points.length === 0) {
@@ -151,9 +162,11 @@ export const EquityHistoryChart = ({
   const firstTick = Math.floor(min / tickStep) * tickStep;
   const lastTick = Math.ceil(max / tickStep) * tickStep;
   const ticks: number[] = [];
+
   for (let tick = firstTick; tick <= lastTick; tick += tickStep) {
     ticks.push(Number(tick.toPrecision(12)));
   }
+
   const axisMin = ticks[0];
   const axisMax = ticks[ticks.length - 1];
   const range = axisMax - axisMin;
@@ -161,17 +174,22 @@ export const EquityHistoryChart = ({
     minimumPlotLeft,
     ...ticks.map((tick) => currency.format(tick).length * 7 + 16),
   );
+
   const chartWidth = Math.max(
     containerWidth,
     plotLeft + rightPadding + Math.max(points.length - 1, 1) * pointSpacing,
   );
+
   const plotRight = chartWidth - rightPadding;
+
   const x = (index: number) =>
     points.length === 1
       ? (plotLeft + plotRight) / 2
       : plotLeft + (index * (plotRight - plotLeft)) / (points.length - 1);
+
   const y = (value: number) =>
     plotBottom - ((value - axisMin) / range) * (plotBottom - plotTop);
+
   const polyline = chartPoints
     .map((point, index) => `${x(index)},${y(point.equity)}`)
     .join(" ");
@@ -179,14 +197,18 @@ export const EquityHistoryChart = ({
   const pointGap = (plotRight - plotLeft) / Math.max(points.length - 1, 1);
   const labelStep = Math.max(1, Math.ceil(96 / pointGap));
   const labelIndices = new Set<number>();
+
   for (let index = 0; index < points.length; index += labelStep) {
     labelIndices.add(index);
   }
+
   const lastIndex = points.length - 1;
   const lastRegularIndex = lastIndex - (lastIndex % labelStep);
+
   if (lastRegularIndex > 0 && lastRegularIndex !== lastIndex) {
     labelIndices.delete(lastRegularIndex);
   }
+
   labelIndices.add(lastIndex);
 
   return (
@@ -207,6 +229,7 @@ export const EquityHistoryChart = ({
             Select categories to include in your equity trend
           </Typography>
         </Stack>
+
         {isFutureMonths && (
           <FormControlLabel
             sx={{
@@ -236,6 +259,7 @@ export const EquityHistoryChart = ({
           />
         )}
       </Box>
+
       <Stack
         direction={{ xs: "column", sm: "row" }}
         spacing={2}
@@ -246,45 +270,52 @@ export const EquityHistoryChart = ({
             return null;
           }
 
+          const selectedCategories =
+            type === "asset" ? selectedAssets : selectedLiabilities;
+
+          const setSelectedCategories =
+            type === "asset" ? setSelectedAssets : setSelectedLiabilities;
+
           return (
             <Stack key={type} spacing={0.25}>
               <Typography variant="subtitle2">
                 {type === "asset" ? "Assets" : "Liabilities"}
               </Typography>
+
               <FormGroup row>
-                {categories.map((category) => {
-                  const key = categoryKey(type, category);
-                  return (
-                    <FormControlLabel
-                      key={key}
-                      control={
-                        <Checkbox
-                          checked={selectedCategories.has(key)}
-                          onChange={(event) => {
-                            setSelectedCategories((current) => {
-                              const next = new Set(current);
-                              if (event.target.checked) {
-                                next.add(key);
-                              } else {
-                                next.delete(key);
-                              }
-                              return next;
-                            });
-                          }}
-                          size="small"
-                        />
-                      }
-                      label={category}
-                    />
-                  );
-                })}
+                {categories.map((category) => (
+                  <FormControlLabel
+                    key={category}
+                    control={
+                      <Checkbox
+                        checked={selectedCategories.has(category)}
+                        onChange={(event) => {
+                          setSelectedCategories((current) => {
+                            const next = new Set(current);
+
+                            if (event.target.checked) {
+                              next.add(category);
+                            } else {
+                              next.delete(category);
+                            }
+
+                            return next;
+                          });
+                        }}
+                        size="small"
+                      />
+                    }
+                    label={category}
+                  />
+                ))}
               </FormGroup>
             </Stack>
           );
         })}
       </Stack>
+
       <Box ref={chartContainerRef} sx={{ mt: 2, width: "100%" }}>
-        {selectedCategoryKeys.length === 0 ? (
+        {selectedCategoryCount === 0 ? (
           <Typography color="text.secondary">
             Select at least one category to show its equity history.
           </Typography>
@@ -303,14 +334,17 @@ export const EquityHistoryChart = ({
               }}
             >
               <title>Equity trend across budget months</title>
+
               <style>
                 {`g.equity-point .equity-point-label { opacity: 0; transition: opacity 120ms ease; }
             g.equity-point:hover .equity-point-label,
             g.equity-point:focus-within .equity-point-label,
             g.equity-point.is-active .equity-point-label { opacity: 1; }`}
               </style>
+
               {ticks.map((value) => {
                 const tickY = y(value);
+
                 return (
                   <g key={value}>
                     <line
@@ -321,6 +355,7 @@ export const EquityHistoryChart = ({
                       stroke="currentColor"
                       opacity="0.16"
                     />
+
                     <text
                       x={plotLeft - 12}
                       y={tickY + 4}
@@ -334,6 +369,7 @@ export const EquityHistoryChart = ({
                   </g>
                 );
               })}
+
               <polyline
                 fill="none"
                 points={polyline}
@@ -342,16 +378,19 @@ export const EquityHistoryChart = ({
                 strokeLinecap="round"
                 strokeWidth="2"
               />
+
               {chartPoints.map((point, index) => {
                 const xPosition = x(index);
                 const pointY = y(point.equity);
                 const exactValue = exactCurrency.format(point.equity);
+
                 return (
                   <g
                     key={point.month}
                     className={`equity-point${activePointMonth === point.month ? " is-active" : ""}`}
                   >
                     <circle cx={xPosition} cy={pointY} r="5" fill="#90caf9" />
+
                     <foreignObject
                       height="36"
                       width="36"
@@ -379,6 +418,7 @@ export const EquityHistoryChart = ({
                         type="button"
                       />
                     </foreignObject>
+
                     <text
                       className="equity-point-label"
                       x={xPosition}
@@ -404,10 +444,13 @@ export const EquityHistoryChart = ({
                   </g>
                 );
               })}
+
               {[...labelIndices].map((index) => {
-                const month = chartPoints[index].month.split(" ")[0];
-                const year = chartPoints[index].month.split(" ")[1];
+                const monthParts = chartPoints[index].month.split(" ");
+                const month = monthParts[0] ?? "";
+                const year = monthParts[1] ?? "";
                 const name = month.slice(0, 3) + " " + year.slice(-2);
+
                 return (
                   <text
                     key={chartPoints[index].month}

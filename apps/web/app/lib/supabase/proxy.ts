@@ -3,6 +3,12 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getSupabaseConfig } from "./config";
 
 export const updateSupabaseSession = async (request: NextRequest) => {
+  // Stripe authenticates webhook requests using its signature,
+  // not a Supabase user session.
+  if (request.nextUrl.pathname === "/api/billing/webhook") {
+    return NextResponse.next();
+  }
+
   const { url, publishableKey } = getSupabaseConfig();
   let response = NextResponse.next({ request });
 

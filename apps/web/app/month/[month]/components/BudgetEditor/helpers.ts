@@ -145,14 +145,16 @@ export const createEditableBudget = (budget: MonthBudget): EditableBudget => {
 
 export const toBudgetInput = (budget: EditableBudget): BudgetInput => {
   return {
-    income: budget.income.map(({ item, amount, date }) => ({
+    income: budget.income.map(({ item, amount, category, date }) => ({
       item,
       amount,
+      ...(category ? { category } : {}),
       ...(date ? { date } : {}),
     })),
-    expenses: budget.expenses.map(({ item, amount, date }) => ({
+    expenses: budget.expenses.map(({ item, amount, category, date }) => ({
       item,
       amount,
+      ...(category ? { category } : {}),
       ...(date ? { date } : {}),
     })),
     equityChange: budget.equityChange.map(({ item, amount }) => ({

@@ -6,7 +6,7 @@ import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import { useRouter } from "next/navigation";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useEffect, useState } from "react";
 import { AddAccountDialog } from "@/app/components/AddAccountDialog";
 import { ResetChanges } from "@/app/components/ResetChanges";
 import type { Account, AccountInput } from "@/app/lib/account-types";
@@ -15,6 +15,10 @@ import type { BudgetSection, MonthBudget } from "@/app/lib/month-types";
 import { CashFlow } from "./components/CashFlow";
 import { CurrentMonthAlert } from "./components/CurrentMonthAlert";
 import { DataTable, type EditableBudgetItem } from "./components/DataTable";
+import {
+  BudgetItemDialog,
+  type BudgetItemDialogSection,
+} from "./components/BudgetItemDialog";
 import { SaveProgressDialog } from "./components/SaveProgressDialog";
 import { TotalEquityTable } from "./components/TotalEquityTable";
 import { sectionTitles } from "./constants";
@@ -32,6 +36,7 @@ import type {
   SaveStepStatus,
   StagedAccount,
 } from "./types";
+import { Box } from "@mui/material";
 
 export const BudgetEditor = ({
   monthSlug,
@@ -62,6 +67,9 @@ export const BudgetEditor = ({
   const [stagedAccounts, setStagedAccounts] = useState<StagedAccount[]>([]);
   const [saveSteps, setSaveSteps] = useState<SaveStep[]>([]);
   const [isProgressDialogOpen, setIsProgressDialogOpen] = useState(false);
+  const [dialogSection, setDialogSection] =
+    useState<BudgetItemDialogSection | null>(null);
+  const [dialogItem, setDialogItem] = useState<EditableBudgetItem | null>(null);
 
   const currentSectionSnapshots = getBudgetSectionSnapshots(
     toBudgetInput(draft),
@@ -75,6 +83,40 @@ export const BudgetEditor = ({
   const hasCreatedStagedAccount = stagedAccounts.some(
     (staged) => staged.createdAccount,
   );
+
+  const closeBudgetItemDialog = () => {
+    setDialogSection(null);
+    setDialogItem(null);
+  };
+
+  const openBudgetItemDialog = (
+    section: BudgetItemDialogSection,
+    item: EditableBudgetItem | null = null,
+  ) => {
+    setDialogSection(section);
+    setDialogItem(item);
+  };
+
+  const handleBudgetItemSave = (updatedItem: EditableBudgetItem) => {
+    if (!dialogSection) {
+      return;
+    }
+
+    const sectionItems = draft[dialogSection];
+    const itemExists = sectionItems.some((item) => item.id === updatedItem.id);
+
+    updateSection(
+      dialogSection,
+      itemExists
+        ? sectionItems.map((item) =>
+            item.id === updatedItem.id ? updatedItem : item,
+          )
+        : [...sectionItems, updatedItem],
+    );
+
+    closeBudgetItemDialog();
+  };
+
   const cancelChanges = () => {
     setDraft(savedDraft);
     setStagedAccounts([]);
@@ -82,7 +124,22 @@ export const BudgetEditor = ({
     setSavedMessage(null);
     setIsAddingEquityItem(false);
     setIsProgressDialogOpen(false);
+    closeBudgetItemDialog();
   };
+
+  useEffect(() => {
+    if (isDirty) {
+      return;
+    }
+
+    const updatedBudget = createEditableBudget(budget);
+    const updatedInput = getBudgetSnapshot(toBudgetInput(updatedBudget));
+
+    savedDraftRef.current = updatedBudget;
+    setDraft(updatedBudget);
+    setSavedDraft(updatedBudget);
+    setSavedInput(updatedInput);
+  }, [budget, isDirty]);
 
   useLayoutEffect(
     () => () => {
@@ -95,6 +152,7 @@ export const BudgetEditor = ({
     },
     [],
   );
+
   const updateSection = (
     section: BudgetSection,
     items: EditableBudgetItem[],
@@ -126,6 +184,7 @@ export const BudgetEditor = ({
       accountType: account.type,
       category: account.category,
     };
+
     setStagedAccounts((current) => [...current, { itemId, input: account }]);
     updateSection("totalEquity", [...draft.totalEquity, item]);
     setIsAddingEquityItem(false);
@@ -133,6 +192,7 @@ export const BudgetEditor = ({
 
   const saveBudget = async () => {
     const validationError = getValidationError(draft);
+
     if (validationError) {
       setError(validationError);
       setSavedMessage(null);
@@ -143,6 +203,7 @@ export const BudgetEditor = ({
       const item = draft.totalEquity.find(
         (entry) => entry.id === staged.itemId,
       );
+
       if (!item) {
         return [];
       }
@@ -163,8 +224,10 @@ export const BudgetEditor = ({
         },
       ];
     });
+
     const refreshStepId = "refresh-total-equity";
     const budgetStepId = "save-budget";
+
     const initialSteps: SaveStep[] = [
       ...remainingStagedAccounts.map((staged) => ({
         id: `account-${staged.itemId}`,
@@ -188,12 +251,15 @@ export const BudgetEditor = ({
         status: "pending",
       },
     ];
+
     setSaveSteps(initialSteps);
     setIsProgressDialogOpen(true);
     setIsSaving(true);
     setError(null);
     setSavedMessage(null);
+
     let activeStepId = initialSteps[0].id;
+
     const setStepStatus = (
       stepId: string,
       status: SaveStepStatus,
@@ -215,17 +281,20 @@ export const BudgetEditor = ({
       for (const staged of remainingStagedAccounts) {
         const stepId = `account-${staged.itemId}`;
         activeStepId = stepId;
+
         if (staged.createdAccount) {
           setStepStatus(stepId, "complete");
           continue;
         }
 
         setStepStatus(stepId, "active");
+
         const response = await fetch("/api/accounts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ account: staged.input }),
         });
+
         if (!response.ok) {
           throw new Error(
             await getApiErrorMessage(
@@ -239,6 +308,7 @@ export const BudgetEditor = ({
           response,
           `Could not read the response after adding ${staged.input.name}`,
         );
+
         const createdItem: EditableBudgetItem = {
           id: staged.itemId,
           item: result.account.name,
@@ -247,12 +317,14 @@ export const BudgetEditor = ({
           accountType: result.account.type,
           category: result.account.category,
         };
+
         workingDraft = {
           ...workingDraft,
           totalEquity: workingDraft.totalEquity.map((item) =>
             item.id === staged.itemId ? createdItem : item,
           ),
         };
+
         setDraft(workingDraft);
 
         const savedBase = savedDraftRef.current;
@@ -264,14 +336,17 @@ export const BudgetEditor = ({
             ? savedBase.totalEquity
             : [...savedBase.totalEquity, createdItem],
         };
+
         savedDraftRef.current = nextSavedBase;
         setSavedDraft(nextSavedBase);
         setSavedInput(getBudgetSnapshot(toBudgetInput(nextSavedBase)));
+
         remainingStagedAccounts = remainingStagedAccounts.map((entry) =>
           entry.itemId === staged.itemId
             ? { ...entry, createdAccount: result.account }
             : entry,
         );
+
         setStagedAccounts(remainingStagedAccounts);
         setStepStatus(stepId, "complete");
       }
@@ -279,9 +354,11 @@ export const BudgetEditor = ({
       if (remainingStagedAccounts.length > 0) {
         activeStepId = refreshStepId;
         setStepStatus(refreshStepId, "active");
+
         const response = await fetch(
           `/api/months/${encodeURIComponent(monthSlug)}`,
         );
+
         if (!response.ok) {
           throw new Error(
             await getApiErrorMessage(
@@ -290,22 +367,27 @@ export const BudgetEditor = ({
             ),
           );
         }
+
         const refreshedBudget = await readApiJson<MonthBudget>(
           response,
           "Could not read the refreshed month budget",
         );
+
         const createdAccountIds = new Set(
           remainingStagedAccounts.flatMap((entry) =>
             entry.createdAccount ? [entry.createdAccount.id] : [],
           ),
         );
+
         const refreshedDraftItems = createEditableBudget(refreshedBudget);
+
         const refreshedItems = refreshedDraftItems.totalEquity.filter(
           (
             item: EditableBudgetItem,
           ): item is EditableBudgetItem & { accountId: string } =>
             Boolean(item.accountId && createdAccountIds.has(item.accountId)),
         );
+
         if (refreshedItems.length !== createdAccountIds.size) {
           throw new Error(
             "One or more new accounts could not be found in the refreshed Total Equity.",
@@ -320,6 +402,7 @@ export const BudgetEditor = ({
             ],
           ),
         );
+
         workingDraft = {
           ...workingDraft,
           totalEquity: workingDraft.totalEquity.map(
@@ -327,6 +410,7 @@ export const BudgetEditor = ({
               const refreshedItem = item.accountId
                 ? refreshedItemsByAccountId.get(item.accountId)
                 : undefined;
+
               return refreshedItem
                 ? {
                     ...refreshedItem,
@@ -346,23 +430,28 @@ export const BudgetEditor = ({
             ),
           ],
         };
+
         setDraft(workingDraft);
 
         const savedBase = savedDraftRef.current;
+
         const savedTotalEquity = refreshedItems.map(
           (item: EditableBudgetItem) => {
             const draftItem = workingDraft.totalEquity.find(
               (entry: EditableBudgetItem) => entry.accountId === item.accountId,
             );
+
             return {
               ...item,
               id: draftItem?.id ?? item.id,
             };
           },
         );
+
         const savedEquityChanges = refreshedDraftItems.equityChange.filter(
           (item) => item.accountId && createdAccountIds.has(item.accountId),
         );
+
         const nextSavedBase: EditableBudget = {
           ...savedBase,
           totalEquity: [
@@ -386,6 +475,7 @@ export const BudgetEditor = ({
             })),
           ],
         };
+
         savedDraftRef.current = nextSavedBase;
         setSavedDraft(nextSavedBase);
         setSavedInput(getBudgetSnapshot(toBudgetInput(nextSavedBase)));
@@ -395,7 +485,9 @@ export const BudgetEditor = ({
 
       activeStepId = budgetStepId;
       setStepStatus(budgetStepId, "active");
+
       const input = toBudgetInput(workingDraft);
+
       const response = await fetch(
         `/api/months/${encodeURIComponent(monthSlug)}`,
         {
@@ -419,11 +511,13 @@ export const BudgetEditor = ({
       setSavedDraft(workingDraft);
       setSavedVersion((version) => version + 1);
       setStagedAccounts([]);
+
       setSavedMessage(
         isCurrentMonth
           ? "Changes saved and account balances synced."
           : "Changes saved.",
       );
+
       setStepStatus(budgetStepId, "complete");
       setIsProgressDialogOpen(false);
       router.refresh();
@@ -432,6 +526,7 @@ export const BudgetEditor = ({
         saveError instanceof Error
           ? saveError.message
           : "Could not save this month's budget.";
+
       setStepStatus(activeStepId, "error", message);
       setError(message);
     } finally {
@@ -439,14 +534,22 @@ export const BudgetEditor = ({
     }
   };
 
+  const existingDialogNames =
+    dialogSection === "totalEquity"
+      ? draft.totalEquity
+          .filter((item) => item.id !== dialogItem?.id)
+          .map((item) => item.item)
+      : [];
+
   return (
     <Stack spacing={5}>
-      {error && <Alert severity="error">{error}</Alert>}
       <CashFlow draft={draft} />
+
       <Grid
         container
         columnSpacing={{ xs: 0, md: 10 }}
         rowSpacing={{ xs: 4, md: 5 }}
+        sx={{ p: "0 24px" }}
       >
         {(Object.keys(sectionTitles) as BudgetSection[]).map((section) => (
           <Grid key={`${section}-${savedVersion}`} size={{ xs: 12, md: 6 }}>
@@ -460,8 +563,15 @@ export const BudgetEditor = ({
                   savedSectionSnapshots[section]
                 }
                 items={draft.totalEquity}
-                onAddItem={() => setIsAddingEquityItem(true)}
+                onAddItem={() => {
+                  if (isCurrentMonth) {
+                    setIsAddingEquityItem(true);
+                  } else {
+                    openBudgetItemDialog("totalEquity");
+                  }
+                }}
                 onChange={(items) => updateSection(section, items)}
+                onEditItem={(item) => openBudgetItemDialog("totalEquity", item)}
                 title={sectionTitles[section]}
                 titleTooltip={
                   isCurrentMonth
@@ -479,7 +589,17 @@ export const BudgetEditor = ({
                   savedSectionSnapshots[section]
                 }
                 items={draft[section]}
+                onAddItem={() => {
+                  if (section === "income" || section === "expenses") {
+                    openBudgetItemDialog(section);
+                  }
+                }}
                 onChange={(items) => updateSection(section, items)}
+                onEditItem={(item) => {
+                  if (section === "income" || section === "expenses") {
+                    openBudgetItemDialog(section, item);
+                  }
+                }}
                 readOnly={section === "equityChange"}
                 showDate={section === "income" || section === "expenses"}
                 title={sectionTitles[section]}
@@ -493,6 +613,18 @@ export const BudgetEditor = ({
           </Grid>
         ))}
       </Grid>
+
+      <BudgetItemDialog
+        accountSynced={isCurrentMonth}
+        disabled={isSaving || hasCreatedStagedAccount}
+        existingNames={existingDialogNames}
+        item={dialogItem}
+        onClose={closeBudgetItemDialog}
+        onSave={handleBudgetItemSave}
+        open={dialogSection !== null}
+        section={dialogSection ?? "income"}
+      />
+
       {isCurrentMonth && (
         <AddAccountDialog
           existingNames={draft.totalEquity.map((entry) => entry.item)}
@@ -501,18 +633,34 @@ export const BudgetEditor = ({
           open={isAddingEquityItem}
         />
       )}
-      <CurrentMonthAlert
-        isCurrentMonth={isCurrentMonth}
-        isFutureMonth={isFutureMonth}
-      />
-      {savedMessage && <Alert severity="success">{savedMessage}</Alert>}
-      {hasCreatedStagedAccount && (
-        <Alert severity="info">
-          An account was created, but the month save is incomplete. Save again
-          to finish syncing the month.
-        </Alert>
-      )}
-      <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
+
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          p: "0 24px",
+        }}
+      >
+        <CurrentMonthAlert
+          isCurrentMonth={isCurrentMonth}
+          isFutureMonth={isFutureMonth}
+        />
+
+        {error && <Alert severity="error">{error}</Alert>}
+        {savedMessage && <Alert severity="success">{savedMessage}</Alert>}
+        {hasCreatedStagedAccount && (
+          <Alert severity="info" sx={{ p: "0 24px" }}>
+            An account was created, but the month save is incomplete. Save again
+            to finish syncing the month.
+          </Alert>
+        )}
+      </Box>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ justifyContent: "flex-end", p: "0 24px" }}
+      >
         <ResetChanges
           disabled={
             (!isDirty && stagedAccounts.length === 0) ||
@@ -521,6 +669,7 @@ export const BudgetEditor = ({
           }
           onReset={cancelChanges}
         />
+
         <Button
           disabled={!isDirty || isSaving || hasCreatedStagedAccount}
           onClick={cancelChanges}
@@ -528,6 +677,7 @@ export const BudgetEditor = ({
         >
           Cancel
         </Button>
+
         <Button
           disabled={(!isDirty && stagedAccounts.length === 0) || isSaving}
           onClick={() => void saveBudget()}
@@ -541,6 +691,7 @@ export const BudgetEditor = ({
               : "Save changes"}
         </Button>
       </Stack>
+
       <SaveProgressDialog
         saveSteps={saveSteps}
         isSaving={isSaving}

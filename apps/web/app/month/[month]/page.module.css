@@ -1,14 +1,3 @@
 .page {
   background: #1a1d23;
 }
-.main {
-  padding: 80px;
-  display: flex;
-  flex-direction: column;
-}
-
-@media (max-width: 700px) {
-  .main {
-    padding: 24px 0px;
-  }
-}

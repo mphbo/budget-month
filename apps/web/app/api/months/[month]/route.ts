@@ -37,6 +37,7 @@ const isBudgetEntry = (
       !Number.isNaN(Date.parse(`${entry.date}T00:00:00.000Z`)) &&
       new Date(`${entry.date}T00:00:00.000Z`).toISOString().slice(0, 10) ===
         entry.date);
+
   const validAccountLink =
     section === "totalEquity"
       ? entry.accountId === undefined
@@ -46,6 +47,7 @@ const isBudgetEntry = (
             entry.accountId,
           )
       : entry.accountId === undefined;
+
   const validAccountClassification =
     section === "totalEquity"
       ? entry.accountType === undefined && entry.category === undefined
@@ -54,7 +56,10 @@ const isBudgetEntry = (
             entry.accountType === "liability") &&
           isAccountCategory(entry.category) &&
           (!requireCurrentAccountLinks || entry.accountId !== undefined)
-      : entry.accountType === undefined && entry.category === undefined;
+      : section === "income" || section === "expenses"
+        ? entry.accountType === undefined &&
+          (entry.category === undefined || isAccountCategory(entry.category))
+        : entry.accountType === undefined && entry.category === undefined;
 
   return (
     validDate &&
@@ -136,6 +141,7 @@ export const PATCH = async (
       { status: 400 },
     );
   }
+
   if (hasDuplicateNames(body.budget.totalEquity.map((entry) => entry.item))) {
     return NextResponse.json(
       {

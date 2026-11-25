@@ -16,17 +16,57 @@ export const LIABILITY_CATEGORIES = {
   other: "Other",
 } as const;
 
+export const INCOME_CATEGORIES = {
+  salary: "Salary",
+  selfEmployment: "Self Employment",
+  business: "Business",
+  investments: "Investments",
+  property: "Property",
+  benefits: "Government Benefits",
+  gifts: "Gifts",
+  other: "Other",
+} as const;
+
+export const EXPENSE_CATEGORIES = {
+  savings: "Savings",
+  investments: "investments",
+  housing: "Housing",
+  utilities: "Utilities",
+  groceries: "Groceries",
+  transportation: "Transportation",
+  insurance: "Insurance",
+  personalCare: "Health/Personal Care",
+  debtPayments: "Debt Payments",
+  shopping: "Shopping",
+  entertainment: "Dining and Entertainment",
+  subscriptions: "Subscriptions",
+  education: "Education",
+  other: "Other",
+} as const;
+
 export type AssetCategory =
   (typeof ASSET_CATEGORIES)[keyof typeof ASSET_CATEGORIES];
 export const FIXED_ASSET_CATEGORIES = [
   ASSET_CATEGORIES.property,
   ASSET_CATEGORIES.vehicle,
 ] as const;
+
 export type FixedAssetCategory = (typeof FIXED_ASSET_CATEGORIES)[number];
 
 export type LiabilityCategory =
   (typeof LIABILITY_CATEGORIES)[keyof typeof LIABILITY_CATEGORIES];
-export type KnownAccountCategory = AssetCategory | LiabilityCategory;
+
+export type IncomeCategory =
+  (typeof INCOME_CATEGORIES)[keyof typeof INCOME_CATEGORIES];
+
+export type ExpenseCategory =
+  (typeof EXPENSE_CATEGORIES)[keyof typeof EXPENSE_CATEGORIES];
+
+export type KnownAccountCategory =
+  | AssetCategory
+  | LiabilityCategory
+  | IncomeCategory
+  | ExpenseCategory;
 
 declare const customAccountCategoryBrand: unique symbol;
 type CustomAccountCategory = string & {
@@ -93,6 +133,7 @@ export type Account = {
   type: AccountType;
   category: AccountCategory;
   amount: number;
+  plaidItemId?: string | null;
 };
 
 export type AccountInput = {
