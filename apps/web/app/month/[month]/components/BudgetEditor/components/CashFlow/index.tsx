@@ -6,6 +6,7 @@ import { EditableBudget } from "../../types";
 import { Box } from "@mui/material";
 import { DonutChart } from "./components/DonutChart";
 import { SummaryChart } from "./components/SummaryChart";
+import { AdvancedDonutChart } from "./components/AdvancedDonutChart";
 
 export const CashFlow = ({ draft }: { draft: EditableBudget }) => {
   const incomeTotal = draft.income.reduce((sum, entry) => {
@@ -39,7 +40,7 @@ export const CashFlow = ({ draft }: { draft: EditableBudget }) => {
         bgcolor: "background.paper",
         border: 1,
         borderColor: "divider",
-        p: { xs: 2, sm: 3 },
+        p: { xs: 3 },
       }}
     >
       <Box>
@@ -48,18 +49,18 @@ export const CashFlow = ({ draft }: { draft: EditableBudget }) => {
         </Typography>
       </Box>
       <Grid container spacing={2}>
-        <Grid size={{ xs: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           {draft.income.length > 0 && (
-            <DonutChart type="income" data={draft.income} />
+            <AdvancedDonutChart type="income" data={draft.income} />
           )}
           <Typography color="text.secondary" variant="body2">
             Income
           </Typography>
           <Typography variant="h6">{formatCurrency(incomeTotal)}</Typography>
         </Grid>
-        <Grid size={{ xs: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           {draft.expenses.length > 0 && (
-            <DonutChart type="expenses" data={draft.expenses} />
+            <AdvancedDonutChart type="expenses" data={draft.expenses} />
           )}
           <Typography color="text.secondary" variant="body2">
             Expenses

@@ -1,4 +1,4 @@
-import { Container, Typography } from "@mui/material";
+import { Box, Container, Typography } from "@mui/material";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
@@ -39,7 +39,11 @@ const MonthBudget = async ({
         sx={{ backgroundColor: "#23272f", p: { xs: "0 0" } }}
         maxWidth="xl"
       >
-        <main className={styles.main}>
+        <Box
+          sx={{
+            padding: { md: "80px" },
+          }}
+        >
           <Typography variant="h2" sx={{ mb: 2, p: "0 24px" }}>
             {budget.name}
           </Typography>
@@ -53,7 +57,7 @@ const MonthBudget = async ({
             isCurrentMonth={isCurrentMonth(month)}
             isFutureMonth={isFutureMonth(month)}
           />
-        </main>
+        </Box>
       </Container>
     </div>
   );
