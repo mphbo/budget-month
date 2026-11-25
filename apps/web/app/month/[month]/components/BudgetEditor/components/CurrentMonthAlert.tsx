@@ -13,7 +13,7 @@ export const CurrentMonthAlert = ({
     {isCurrentMonth ? (
       <List
         disablePadding
-        sx={{ display: "flex", flexDirection: "column", gap: 1, pl: 2 }}
+        sx={{ display: "flex", flexDirection: "column", gap: 1 }}
       >
         <ListItem disablePadding>
           Total Equity balances sync with Accounts for this month. Add, edit, or

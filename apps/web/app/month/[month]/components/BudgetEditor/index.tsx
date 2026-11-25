@@ -36,6 +36,7 @@ import type {
   SaveStepStatus,
   StagedAccount,
 } from "./types";
+import { Box } from "@mui/material";
 
 export const BudgetEditor = ({
   monthSlug,
@@ -542,14 +543,13 @@ export const BudgetEditor = ({
 
   return (
     <Stack spacing={5}>
-      {error && <Alert severity="error">{error}</Alert>}
-
       <CashFlow draft={draft} />
 
       <Grid
         container
         columnSpacing={{ xs: 0, md: 10 }}
         rowSpacing={{ xs: 4, md: 5 }}
+        sx={{ p: "0 24px" }}
       >
         {(Object.keys(sectionTitles) as BudgetSection[]).map((section) => (
           <Grid key={`${section}-${savedVersion}`} size={{ xs: 12, md: 6 }}>
@@ -634,21 +634,33 @@ export const BudgetEditor = ({
         />
       )}
 
-      <CurrentMonthAlert
-        isCurrentMonth={isCurrentMonth}
-        isFutureMonth={isFutureMonth}
-      />
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          p: "0 24px",
+        }}
+      >
+        <CurrentMonthAlert
+          isCurrentMonth={isCurrentMonth}
+          isFutureMonth={isFutureMonth}
+        />
 
-      {savedMessage && <Alert severity="success">{savedMessage}</Alert>}
-
-      {hasCreatedStagedAccount && (
-        <Alert severity="info">
-          An account was created, but the month save is incomplete. Save again
-          to finish syncing the month.
-        </Alert>
-      )}
-
-      <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
+        {error && <Alert severity="error">{error}</Alert>}
+        {savedMessage && <Alert severity="success">{savedMessage}</Alert>}
+        {hasCreatedStagedAccount && (
+          <Alert severity="info" sx={{ p: "0 24px" }}>
+            An account was created, but the month save is incomplete. Save again
+            to finish syncing the month.
+          </Alert>
+        )}
+      </Box>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ justifyContent: "flex-end", p: "0 24px" }}
+      >
         <ResetChanges
           disabled={
             (!isDirty && stagedAccounts.length === 0) ||
