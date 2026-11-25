@@ -12,14 +12,12 @@ import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
-import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import { useEffect, useState } from "react";
-import { AmountField } from "@/app/components/AmountField";
-import { UnsavedChangesIndicator } from "@/app/components/UnsavedChangesIndicator";
+import { useState } from "react";
 import type { AccountCategory, AccountType } from "@/app/lib/account-types";
 import { formatCurrency } from "@/app/lib/formatting";
+import { UnsavedChangesIndicator } from "@/app/components/UnsavedChangesIndicator";
 
 export type EditableBudgetItem = {
   id: string;
@@ -38,6 +36,8 @@ export const DataTable = ({
   title,
   items,
   onChange,
+  onAddItem,
+  onEditItem,
   disabled,
   readOnly = false,
   titleTooltip,
@@ -47,19 +47,22 @@ export const DataTable = ({
   title: string;
   items: EditableBudgetItem[];
   onChange: (items: EditableBudgetItem[]) => void;
+  onAddItem: () => void;
+  onEditItem: (item: EditableBudgetItem) => void;
   disabled: boolean;
   readOnly?: boolean;
   titleTooltip?: string;
   showDate?: boolean;
   hasUnsavedChanges?: boolean;
 }) => {
-  const [editingIds, setEditingIds] = useState<Set<string>>(() => new Set());
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+
   const total = items.reduce((sum, entry) => {
     const amount = Number(entry.amount);
     return sum + (Number.isFinite(amount) ? amount : 0);
   }, 0);
+
   const displayItems = items
     .map((entry, index) => ({ entry, index }))
     .sort((left, right) => {
@@ -92,63 +95,6 @@ export const DataTable = ({
 
     setSortColumn(column);
     setSortDirection("asc");
-  };
-
-  useEffect(() => {
-    if (editingIds.size === 0) {
-      return;
-    }
-
-    const handleDocumentPointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (target instanceof Element && target.closest("[role='listbox']")) {
-        return;
-      }
-
-      const editingRow =
-        target instanceof Element
-          ? target
-              .closest("input, [role='combobox']")
-              ?.closest("[data-budget-row]")
-          : null;
-      const rowId = editingRow?.getAttribute("data-budget-row");
-
-      if (rowId && editingIds.has(rowId)) {
-        setEditingIds(new Set([rowId]));
-      } else {
-        setEditingIds(new Set());
-      }
-    };
-
-    document.addEventListener("pointerdown", handleDocumentPointerDown);
-    return () =>
-      document.removeEventListener("pointerdown", handleDocumentPointerDown);
-  }, [editingIds]);
-
-  const updateItem = (id: string, patch: Partial<EditableBudgetItem>) => {
-    onChange(
-      items.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)),
-    );
-  };
-
-  const handleRowBlur = (
-    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
-    entry: EditableBudgetItem,
-  ) => {
-    const row = event.currentTarget.closest("tr");
-    if (
-      row &&
-      event.relatedTarget instanceof Node &&
-      row.contains(event.relatedTarget)
-    ) {
-      return;
-    }
-
-    setEditingIds((current) => {
-      const next = new Set(current);
-      next.delete(entry.id);
-      return next;
-    });
   };
 
   return (
@@ -191,6 +137,7 @@ export const DataTable = ({
           <UnsavedChangesIndicator label={`Unsaved changes in ${title}`} />
         )}
       </Box>
+
       <Table aria-label={`${title} budget table`}>
         <TableHead>
           <TableRow>
@@ -233,62 +180,17 @@ export const DataTable = ({
             <TableCell padding="checkbox" />
           </TableRow>
         </TableHead>
+
         <TableBody>
           {displayItems.map(({ entry, index }) => (
-            <TableRow data-budget-row={entry.id} key={entry.id}>
-              <TableCell>
-                {editingIds.has(entry.id) ? (
-                  <TextField
-                    aria-label={`${title} item ${index + 1}`}
-                    disabled={disabled}
-                    fullWidth
-                    slotProps={{ htmlInput: { maxLength: 200 } }}
-                    onBlur={(event) => handleRowBlur(event, entry)}
-                    onChange={(event) =>
-                      updateItem(entry.id, { item: event.target.value })
-                    }
-                    size="small"
-                    value={entry.item}
-                  />
-                ) : (
-                  entry.item
-                )}
-              </TableCell>
+            <TableRow key={entry.id}>
+              <TableCell>{entry.item}</TableCell>
               <TableCell align="right">
-                {editingIds.has(entry.id) ? (
-                  <AmountField
-                    aria-label={`${title} amount ${index + 1}`}
-                    disabled={disabled}
-                    fullWidth
-                    onBlur={(event) => handleRowBlur(event, entry)}
-                    onAmountChange={(amount) =>
-                      updateItem(entry.id, { amount })
-                    }
-                    size="small"
-                    value={entry.amount}
-                  />
-                ) : (
-                  formatCurrency(Number(entry.amount) || 0)
-                )}
+                {formatCurrency(Number(entry.amount) || 0)}
               </TableCell>
               {showDate && (
                 <TableCell>
-                  {editingIds.has(entry.id) ? (
-                    <TextField
-                      aria-label={`${title} date ${index + 1}`}
-                      disabled={disabled}
-                      fullWidth
-                      onBlur={(event) => handleRowBlur(event, entry)}
-                      onChange={(event) =>
-                        updateItem(entry.id, {
-                          date: event.target.value || undefined,
-                        })
-                      }
-                      size="small"
-                      type="date"
-                      value={entry.date ?? ""}
-                    />
-                  ) : entry.date ? (
+                  {entry.date ? (
                     <time dateTime={entry.date}>{entry.date}</time>
                   ) : (
                     "—"
@@ -297,15 +199,11 @@ export const DataTable = ({
               )}
               <TableCell padding="checkbox">
                 <Box sx={{ display: "flex", gap: 1 }}>
-                  {!readOnly && !editingIds.has(entry.id) && (
+                  {!readOnly && (
                     <IconButton
                       aria-label={`Edit ${entry.item || `row ${index + 1}`}`}
                       disabled={disabled}
-                      onClick={() =>
-                        setEditingIds((current) =>
-                          new Set(current).add(entry.id),
-                        )
-                      }
+                      onClick={() => onEditItem(entry)}
                       size="small"
                     >
                       <EditIcon fontSize="small" />
@@ -327,6 +225,7 @@ export const DataTable = ({
               </TableCell>
             </TableRow>
           ))}
+
           <TableRow>
             <TableCell>
               <Typography sx={{ fontWeight: "bold" }}>Total</Typography>
@@ -341,14 +240,11 @@ export const DataTable = ({
           </TableRow>
         </TableBody>
       </Table>
+
       {!readOnly && (
         <Button
           disabled={disabled || items.length >= 100}
-          onClick={() => {
-            const id = crypto.randomUUID();
-            onChange([...items, { id, item: "", amount: "" }]);
-            setEditingIds((current) => new Set(current).add(id));
-          }}
+          onClick={onAddItem}
           startIcon={<AddIcon />}
           sx={{ mt: 1 }}
         >

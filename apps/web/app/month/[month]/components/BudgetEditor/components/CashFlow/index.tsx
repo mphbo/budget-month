@@ -48,21 +48,25 @@ export const CashFlow = ({ draft }: { draft: EditableBudget }) => {
         </Typography>
       </Box>
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          {draft.income.length > 0 && <DonutChart data={draft.income} />}
+        <Grid size={{ xs: 6 }}>
+          {draft.income.length > 0 && (
+            <DonutChart type="income" data={draft.income} />
+          )}
           <Typography color="text.secondary" variant="body2">
             Income
           </Typography>
           <Typography variant="h6">{formatCurrency(incomeTotal)}</Typography>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          {draft.expenses.length > 0 && <DonutChart data={draft.expenses} />}
+        <Grid size={{ xs: 6 }}>
+          {draft.expenses.length > 0 && (
+            <DonutChart type="expenses" data={draft.expenses} />
+          )}
           <Typography color="text.secondary" variant="body2">
             Expenses
           </Typography>
           <Typography variant="h6">{formatCurrency(expensesTotal)}</Typography>
         </Grid>
-        <Grid size={{ xs: 12, sm: 12 }}>
+        <Grid size={{ xs: 12 }}>
           {draft.income.length === 0 && draft.expenses.length === 0 ? null : (
             <SummaryChart
               incomeTotal={incomeTotal}

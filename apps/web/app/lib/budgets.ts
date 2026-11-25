@@ -678,17 +678,21 @@ export const getMonthBudget = async (
             ? Math.abs(Number(item.amount))
             : Number(item.amount),
         ...(item.account_id ? { accountId: item.account_id } : {}),
-        ...(account
-          ? {
-              accountType: account.account_type,
-              category: parseAccountCategory(account.category),
-            }
-          : item.account_type && item.category
+        ...(section === "income" || section === "expenses"
+          ? item.category
+            ? { category: parseAccountCategory(item.category) }
+            : {}
+          : account
             ? {
-                accountType: item.account_type,
-                category: parseAccountCategory(item.category),
+                accountType: account.account_type,
+                category: parseAccountCategory(account.category),
               }
-            : {}),
+            : item.account_type && item.category
+              ? {
+                  accountType: item.account_type,
+                  category: parseAccountCategory(item.category),
+                }
+              : {}),
         ...(item.scheduled_date ? { date: item.scheduled_date } : {}),
       });
     }

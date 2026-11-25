@@ -14,7 +14,7 @@ export const SummaryChart = ({
 
   return (
     <BarChart
-      desc="Hello World"
+      desc="Income and expenses summary"
       layout={isSmall ? "vertical" : "horizontal"}
       xAxis={[{ min: 0, max: isSurplus ? incomeTotal : expenseTotal }]}
       yAxis={[{ scaleType: "band", data: [""] }]}
@@ -23,13 +23,13 @@ export const SummaryChart = ({
           data: [isSurplus ? expenseTotal : incomeTotal],
           stack: "total",
           label: "Expenses",
-          color: "#64748b",
+          color: "#64748B",
         },
         {
           data: [Math.abs(incomeTotal - expenseTotal)],
           stack: "total",
           label: isSurplus ? "Surplus" : isDeficit ? "Deficit" : "Balance",
-          color: isSurplus ? "#16a34a" : isDeficit ? "red" : "orange",
+          color: isSurplus ? "#269B83" : isDeficit ? "#C45D62" : "#E5A04B",
         },
       ]}
       height={120}

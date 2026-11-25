@@ -16,7 +16,6 @@ import TableSortLabel from "@mui/material/TableSortLabel";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
-import { TotalEquityItemDialog } from "../TotalEquityItemDialog";
 import { UnsavedChangesIndicator } from "@/app/components/UnsavedChangesIndicator";
 import {
   isFixedAssetCategory,
@@ -33,9 +32,9 @@ export const TotalEquityTable = ({
   items,
   onChange,
   disabled,
-  accountSynced,
   titleTooltip,
   onAddItem,
+  onEditItem,
   addDisabled = false,
   hasUnsavedChanges = false,
 }: {
@@ -45,21 +44,22 @@ export const TotalEquityTable = ({
   disabled: boolean;
   accountSynced: boolean;
   titleTooltip?: string;
-  onAddItem?: () => void;
+  onAddItem: () => void;
+  onEditItem: (item: EditableBudgetItem) => void;
   addDisabled?: boolean;
   hasUnsavedChanges?: boolean;
 }) => {
-  const [equityDialogItem, setEquityDialogItem] =
-    useState<EditableBudgetItem | null>(null);
-  const [isAddingEquityItem, setIsAddingEquityItem] = useState(false);
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+
   const total = items.reduce((sum, entry) => {
     const amount = Number(entry.amount);
     const type = entry.accountType ?? (amount < 0 ? "liability" : "asset");
     const balance = Number.isFinite(amount) ? Math.abs(amount) : 0;
+
     return sum + (type === "liability" ? -balance : balance);
   }, 0);
+
   const displayItems = items
     .map((entry, index) => ({ entry, index }))
     .sort((left, right) => {
@@ -81,21 +81,26 @@ export const TotalEquityTable = ({
         left.index - right.index
       );
     });
+
   const assetItems = displayItems.filter(
     ({ entry }) =>
       entry.accountType === "asset" ||
       (!entry.accountType && Number(entry.amount) >= 0),
   );
+
   const liabilityItems = displayItems.filter(
     ({ entry }) =>
       entry.accountType === "liability" ||
       (!entry.accountType && Number(entry.amount) < 0),
   );
+
   const getGroupTotal = (groupItems: typeof displayItems) =>
     groupItems.reduce((sum, { entry }) => {
       const amount = Number(entry.amount);
+
       return sum + (Number.isFinite(amount) ? amount : 0);
     }, 0);
+
   const totalWithoutFixedAssets =
     assetItems
       .filter(
@@ -143,7 +148,7 @@ export const TotalEquityTable = ({
             <IconButton
               aria-label={`Edit ${entry.item || `row ${index + 1}`}`}
               disabled={disabled}
-              onClick={() => setEquityDialogItem(entry)}
+              onClick={() => onEditItem(entry)}
               size="small"
             >
               <EditIcon fontSize="small" />
@@ -214,10 +219,12 @@ export const TotalEquityTable = ({
         ) : (
           <Typography variant="h4">{title}</Typography>
         )}
+
         {hasUnsavedChanges && (
           <UnsavedChangesIndicator label={`Unsaved changes in ${title}`} />
         )}
       </Box>
+
       <Table aria-label={`${title} budget table`}>
         <TableHead>
           <TableRow>
@@ -247,24 +254,31 @@ export const TotalEquityTable = ({
             <TableCell padding="checkbox" />
           </TableRow>
         </TableHead>
+
         <TableBody>
           <TableRow>
             <TableCell colSpan={3}>
               <Typography variant="h6">Assets</Typography>
             </TableCell>
           </TableRow>
+
           {assetItems.map(renderBudgetItem)}
+
           {renderGroupTotal("Total assets", getGroupTotal(assetItems))}
+
           <TableRow>
             <TableCell colSpan={3}>
               <Typography variant="h6">Liabilities</Typography>
             </TableCell>
           </TableRow>
+
           {liabilityItems.map(renderBudgetItem)}
+
           {renderGroupTotal(
             "Total liabilities",
             Math.abs(getGroupTotal(liabilityItems)),
           )}
+
           <TableRow>
             <TableCell>
               <Typography sx={{ fontWeight: "bold" }}>Net total</Typography>
@@ -279,6 +293,7 @@ export const TotalEquityTable = ({
             </TableCell>
             <TableCell />
           </TableRow>
+
           <TableRow>
             <TableCell>
               <Typography sx={{ fontWeight: "bold" }}>Net total</Typography>
@@ -295,50 +310,15 @@ export const TotalEquityTable = ({
           </TableRow>
         </TableBody>
       </Table>
-      {!accountSynced && (
-        <Button
-          disabled={disabled || addDisabled || items.length >= 100}
-          onClick={() => setIsAddingEquityItem(true)}
-          startIcon={<AddIcon />}
-          sx={{ mt: 1 }}
-        >
-          Add item
-        </Button>
-      )}
-      {accountSynced && onAddItem && (
-        <Button
-          disabled={disabled || addDisabled || items.length >= 100}
-          onClick={onAddItem}
-          startIcon={<AddIcon />}
-          sx={{ mt: 1 }}
-        >
-          Add item
-        </Button>
-      )}
-      <TotalEquityItemDialog
-        accountSynced={accountSynced}
-        disabled={disabled}
-        existingNames={items
-          .filter((item) => item.id !== equityDialogItem?.id)
-          .map((item) => item.item)}
-        item={equityDialogItem}
-        onClose={() => {
-          setEquityDialogItem(null);
-          setIsAddingEquityItem(false);
-        }}
-        onSave={(updatedItem) => {
-          if (equityDialogItem) {
-            onChange(
-              items.map((item) =>
-                item.id === updatedItem.id ? updatedItem : item,
-              ),
-            );
-          } else {
-            onChange([...items, updatedItem]);
-          }
-        }}
-        open={Boolean(equityDialogItem) || isAddingEquityItem}
-      />
+
+      <Button
+        disabled={disabled || addDisabled || items.length >= 100}
+        onClick={onAddItem}
+        startIcon={<AddIcon />}
+        sx={{ mt: 1 }}
+      >
+        Add item
+      </Button>
     </>
   );
 };
